@@ -79,7 +79,6 @@
         .btn-add { background-color: var(--success); color: white; }
         .btn-delete { background-color: var(--primary); color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; }
         .btn-liquidar { background-color: var(--secondary); color: white; padding: 3px 6px; font-size: 11px; border-radius: 4px; }
-        .btn-descontar { background-color: var(--warning); color: #000; padding: 3px 6px; font-size: 11px; border-radius: 4px; }
         
         .danger-zone {
             margin-top: 35px;
@@ -121,16 +120,21 @@
             outline: none;
             background: white;
         }
+        
+        /* Botón de estado estilizado con iconos elegantes */
         .btn-pago {
-            padding: 6px 8px;
-            font-size: 11px;
+            padding: 6px 10px;
+            font-size: 14px;
             border-radius: 6px;
             font-weight: bold;
             cursor: pointer;
             border: none;
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .pago-pendiente { background-color: var(--warning); color: #000; }
+        .pago-pendiente { background-color: #dfe4ea; color: #57606f; }
         .pago-pagado { background-color: var(--success); color: white; }
 
         .config-box {
@@ -430,25 +434,58 @@
             });
 
             select.addEventListener('change', function() {
-                localStorage.setItem('linea_ronda_' + i, select.value);
-                if(select.value === "") {
-                    localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
+                let anteriorJugadora = localStorage.getItem('linea_ronda_' + i) || '';
+                let nuevaJugadora = select.value;
+                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                let estadoAnterior = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
+
+                if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora) {
+                    if (valorLinea > 0 && saldos[anteriorJugadora] !== undefined && estadoAnterior !== 'pagado') {
+                        saldos[anteriorJugadora] += valorLinea; 
+                    }
                 }
+
+                if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
+                    if (valorLinea > 0 && saldos[nuevaJugadora] !== undefined && saldos[nuevaJugadora] > 0) {
+                        saldos[nuevaJugadora] -= valorLinea; 
+                        localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                    } else {
+                        localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                    }
+                }
+
+                localStorage.setItem('linea_ronda_' + i, nuevaJugadora);
+                if (nuevaJugadora === "") {
+                    localStorage.removeItem('estado_pago_linea_' + i);
+                }
+
+                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarLineas();
+                mostrarSaldos();
             });
 
+            // Botón con símbolos elegantes (🔄 para pendiente / ✔ para pagado)
             let btnPago = document.createElement('button');
             btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
-            btnPago.textContent = estadoPago === 'pagado' ? 'Pagado' : 'Pendiente';
-            btnPago.title = "Haz clic para cambiar estado de pago";
+            btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
+            btnPago.title = estadoPago === 'pagado' ? 'Pagado (Clic para cambiar a pendiente)' : 'Pendiente (Clic para marcar como pagado)';
             
             btnPago.addEventListener('click', function() {
-                if (select.value === "") {
+                let nombreJugadora = select.value;
+                if (nombreJugadora === "") {
                     alert("Selecciona una jugadora en esta línea primero.");
                     return;
                 }
-                let nuevoEstado = (localStorage.getItem('estado_pago_linea_' + i) === 'pagado') ? 'pendiente' : 'pagado';
-                localStorage.setItem('estado_pago_linea_' + i, nuevoEstado);
+
+                let estadoActual = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
+
+                if (estadoActual === 'pendiente') {
+                    localStorage.setItem('estado_pago_linea_' + i, 'pagado');
+                } else {
+                    localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                }
+
                 renderizarLineas();
             });
 
@@ -548,7 +585,7 @@
 
             if (nombre !== "" && monto > 0) {
                 if (!saldos[nombre]) saldos[nombre] = 0;
-                saldos[nombre] += monto; // SUMA AUTOMÁTICA DEL PREMIO
+                saldos[nombre] += monto; 
                 registradas++;
                 resumenRondaText += `[${p}º: ${nombre} (+${monto})] `;
             }
@@ -557,16 +594,13 @@
         if (registradas > 0) {
             localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
             
-            // Guardar en el historial de rondas
             historial.push(resumenRondaText);
             localStorage.setItem('historial_rondas_lista', JSON.stringify(historial));
             
-            // Limpiar campos de ganadoras de esta ronda
             for (let p = 1; p <= 4; p++) {
                 document.getElementById('ganadora_' + p).value = '';
             }
 
-            // VACIAR COMPLETAMENTE LAS 15 LÍNEAS PARA LA NUEVA RONDA (PERO LOS SALDOS QUEDAN)
             for (let i = 1; i <= totalLineas; i++) {
                 localStorage.removeItem('linea_ronda_' + i);
                 localStorage.removeItem('estado_pago_linea_' + i);
@@ -576,7 +610,7 @@
             localStorage.setItem('numero_ronda', nuevaRonda);
 
             actualizarTodo();
-            alert(`¡Ronda ${rondaActual} guardada y saldos sumados! Pasando a la Ronda ${nuevaRonda}. Las líneas se han vaciado limpias.`);
+            alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Líneas vaciadas.`);
         } else {
             alert("Por favor selecciona al menos una ganadora y su monto.");
         }
@@ -599,25 +633,8 @@
         }
     }
 
-    function descontarValorLinea(nombre) {
-        let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
-        if (valorLinea <= 0) {
-            alert("Primero define el costo de la línea en la parte superior.");
-            return;
-        }
-
-        if (confirm(`¿Descontar el valor de la línea (${valorLinea}) del saldo de ${nombre}?`)) {
-            let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
-            if (!saldos[nombre]) saldos[nombre] = 0;
-            saldos[nombre] -= valorLinea; // RESTA AUTOMÁTICA DEL VALOR DE LA LÍNEA
-
-            localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
-            actualizarTodo();
-        }
-    }
-
     function liquidarJugadora(nombre) {
-        if (confirm(`¿Ya le transferiste o pagaste a ${nombre}? Esto dejará su saldo en cero y la borrará de la lista.`)) {
+        if (confirm(`¿Ya le transferiste o pagaste a ${nombre}? Esto dejará saldo en cero y la borrará de la lista.`)) {
             let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
             delete saldos[nombre];
             localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
@@ -642,7 +659,6 @@
                 <div class="saldo-row">
                     <span><b>${nombre}:</b> ${valor >= 0 ? '+' + valor : valor}</span>
                     <div class="saldo-actions">
-                        <button class="btn-descontar" onclick="descontarValorLinea('${nombre}')" title="Descuenta el costo de la línea actual">- Línea</button>
                         <button class="btn-add" onclick="ajustarSaldoManual('${nombre}')">+/-</button>
                         <button class="btn-liquidar" onclick="liquidarJugadora('${nombre}')">Pagar (0)</button>
                     </div>
