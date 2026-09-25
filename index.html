@@ -12,7 +12,7 @@
             --white: #ffffff;
             --success: #2ed573;
             --whatsapp: #25d366;
-            --danger: #ff6b81;
+            --warning: #ffa502;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -42,7 +42,6 @@
             margin-top: 0;
             margin-bottom: 10px;
         }
-        /* Indicador de Ronda Actual */
         .ronda-indicator {
             background: #2f3542;
             color: white;
@@ -52,7 +51,6 @@
             font-size: 16px;
             font-weight: bold;
             margin-bottom: 15px;
-            letter-spacing: 0.5px;
         }
         .section-title {
             font-size: 16px;
@@ -80,6 +78,8 @@
         .btn-clear { background-color: var(--secondary); color: white; flex: 1; }
         .btn-add { background-color: var(--success); color: white; }
         .btn-delete { background-color: var(--primary); color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; }
+        .btn-liquidar { background-color: var(--secondary); color: white; padding: 3px 6px; font-size: 11px; border-radius: 4px; }
+        .btn-descontar { background-color: var(--warning); color: #000; padding: 3px 6px; font-size: 11px; border-radius: 4px; }
         
         .danger-zone {
             margin-top: 35px;
@@ -103,24 +103,60 @@
             padding: 6px 8px;
             border-radius: 8px;
             border: 1px solid #e1e1e1;
+            gap: 6px;
         }
         .line-number {
             font-weight: bold;
-            font-size: 15px;
+            font-size: 14px;
             color: var(--primary);
-            width: 40px;
+            width: 30px;
             flex-shrink: 0;
         }
         .line-select {
             flex-grow: 1;
-            padding: 7px 8px;
+            padding: 7px;
             border: 1px solid #ccc;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 13px;
             outline: none;
             background: white;
         }
-        .line-select:focus { border-color: var(--primary); }
+        .btn-pago {
+            padding: 6px 8px;
+            font-size: 11px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            flex-shrink: 0;
+        }
+        .pago-pendiente { background-color: var(--warning); color: #000; }
+        .pago-pagado { background-color: var(--success); color: white; }
+
+        .config-box {
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e1e1e1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .config-box label {
+            font-size: 13px;
+            font-weight: bold;
+            color: var(--secondary);
+        }
+        .config-box input {
+            width: 100px;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: center;
+            font-weight: bold;
+        }
 
         .premios-grid {
             display: grid;
@@ -179,18 +215,52 @@
             font-size: 13px;
             gap: 6px;
         }
+        .saldo-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 6px 10px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 13px;
+        }
+        .saldo-actions {
+            display: flex;
+            gap: 4px;
+        }
+        .saldo-actions button {
+            padding: 3px 6px;
+            font-size: 11px;
+        }
+        .historial-box {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #e1e1e1;
+            font-size: 12px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>Control de Líneas - Yune</h2>
-    <p class="subtitle">Gestión limpia y organizada</p>
+    <p class="subtitle">Organizado y sin enredos</p>
 
     <!-- INDICADOR DE RONDA -->
     <div class="ronda-indicator" id="display-ronda">RONDA 1</div>
 
-    <!-- ADMINISTRAR JUGADORAS FIJAS -->
+    <!-- CONFIGURACIÓN VALOR DE LÍNEA -->
+    <div class="config-box">
+        <label>Costo de cada Línea:</label>
+        <input type="number" id="valor_linea_config" placeholder="Ej: 5" oninput="guardarValorLinea()">
+    </div>
+
+    <!-- JUGADORAS FIJAS -->
     <div class="section-title">Mis Jugadoras Habituales</div>
     <div class="registry-box">
         <div class="registry-input-row">
@@ -198,7 +268,7 @@
             <button class="btn-add" onclick="agregarJugadoraFija()">+ Agregar</button>
         </div>
         <div id="lista-jugadoras-fijas">
-            <em>No hay jugadoras fijas registradas. Añade una arriba.</em>
+            <em>No hay jugadoras fijas registradas.</em>
         </div>
     </div>
 
@@ -208,7 +278,7 @@
         <button class="btn-clear" onclick="limpiarLineasRonda()">🧹 Vaciar Líneas</button>
     </div>
 
-    <div class="section-title">Asignación de las 15 Líneas (Ronda Actual)</div>
+    <div class="section-title">Asignación de las 15 Líneas (En Orden)</div>
     <div id="lista-lineas"></div>
 
     <!-- PREMIOS -->
@@ -217,30 +287,36 @@
         <div class="premio-box">
             <label>1era Línea</label>
             <select id="ganadora_1" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
-            <input type="number" id="monto_1" placeholder="Premio" style="margin-top:5px;">
+            <input type="number" id="monto_1" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(1)">
         </div>
         <div class="premio-box">
             <label>2da Línea</label>
             <select id="ganadora_2" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
-            <input type="number" id="monto_2" placeholder="Premio" style="margin-top:5px;">
+            <input type="number" id="monto_2" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(2)">
         </div>
         <div class="premio-box">
             <label>3era Línea</label>
             <select id="ganadora_3" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
-            <input type="number" id="monto_3" placeholder="Premio" style="margin-top:5px;">
+            <input type="number" id="monto_3" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(3)">
         </div>
         <div class="premio-box">
             <label>4ta Línea</label>
             <select id="ganadora_4" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
-            <input type="number" id="monto_4" placeholder="Premio" style="margin-top:5px;">
+            <input type="number" id="monto_4" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(4)">
         </div>
     </div>
     <button class="btn-whatsapp" onclick="guardarRonda()" style="width:100%; margin-bottom: 10px;">💾 Guardar Premios y Avanzar Ronda</button>
 
-    <!-- SALDOS -->
-    <div class="section-title">Saldos Positivos Acumulados</div>
-    <div id="lista-saldos" style="font-size: 14px; background: #f8f9fa; padding: 8px; border-radius: 8px; margin-bottom: 10px;">
+    <!-- SALDOS Y AJUSTES -->
+    <div class="section-title">Saldos Positivos / Liquidación</div>
+    <div id="lista-saldos" style="background: #f8f9fa; padding: 8px; border-radius: 8px; margin-bottom: 10px;">
         <em>Aún no hay saldos acumulados.</em>
+    </div>
+
+    <!-- HISTORIAL DE RONDAS -->
+    <div class="section-title">Historial de Rondas Guardadas</div>
+    <div id="historial-rondas" class="historial-box">
+        <em>Aún no hay rondas finalizadas.</em>
     </div>
 
     <!-- ZONA DE PELIGRO -->
@@ -257,8 +333,17 @@
     }
 
     function actualizarIndicadorRonda() {
-        let ronda = obtenerRondaActual();
-        document.getElementById('display-ronda').textContent = `RONDA ${ronda}`;
+        document.getElementById('display-ronda').textContent = `RONDA ${obtenerRondaActual()}`;
+    }
+
+    function guardarValorLinea() {
+        let val = document.getElementById('valor_linea_config').value;
+        localStorage.setItem('valor_linea_costo', val);
+    }
+
+    function cargarValorLinea() {
+        let val = localStorage.getItem('valor_linea_costo') || '';
+        document.getElementById('valor_linea_config').value = val;
     }
 
     function obtenerJugadorasFijas() {
@@ -287,7 +372,7 @@
     }
 
     function eliminarJugadoraFija(nombre) {
-        if (confirm(`¿Seguro que deseas eliminar a ${nombre} de tus jugadoras fijas?`)) {
+        if (confirm(`¿Seguro que deseas eliminar a ${nombre}?`)) {
             let lista = obtenerJugadorasFijas();
             lista = lista.filter(j => j !== nombre);
             guardarJugadorasFijas(lista);
@@ -318,6 +403,7 @@
 
         for (let i = 1; i <= totalLineas; i++) {
             let guardado = localStorage.getItem('linea_ronda_' + i) || '';
+            let estadoPago = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
 
             let row = document.createElement('div');
             row.className = 'line-row';
@@ -345,10 +431,32 @@
 
             select.addEventListener('change', function() {
                 localStorage.setItem('linea_ronda_' + i, select.value);
+                if(select.value === "") {
+                    localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                }
+                renderizarLineas();
+            });
+
+            let btnPago = document.createElement('button');
+            btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
+            btnPago.textContent = estadoPago === 'pagado' ? 'Pagado' : 'Pendiente';
+            btnPago.title = "Haz clic para cambiar estado de pago";
+            
+            btnPago.addEventListener('click', function() {
+                if (select.value === "") {
+                    alert("Selecciona una jugadora en esta línea primero.");
+                    return;
+                }
+                let nuevoEstado = (localStorage.getItem('estado_pago_linea_' + i) === 'pagado') ? 'pendiente' : 'pagado';
+                localStorage.setItem('estado_pago_linea_' + i, nuevoEstado);
+                renderizarLineas();
             });
 
             row.appendChild(num);
             row.appendChild(select);
+            if(guardado !== "") {
+                row.appendChild(btnPago);
+            }
             contenedorLineas.appendChild(row);
         }
     }
@@ -366,26 +474,45 @@
                 if (nombre === actual) opt.selected = true;
                 sel.appendChild(opt);
             });
+            
+            let montoGuardado = localStorage.getItem('premio_monto_def_' + p);
+            if (montoGuardado && !document.getElementById('monto_' + p).value) {
+                document.getElementById('monto_' + p).value = montoGuardado;
+            }
         }
+    }
+
+    function guardarPremioTemporal(p) {
+        let monto = document.getElementById('monto_' + p).value;
+        localStorage.setItem('premio_monto_def_' + p, monto);
     }
 
     function actualizarTodo() {
         actualizarIndicadorRonda();
+        cargarValorLinea();
         renderizarJugadorasFijas();
         renderizarLineas();
         actualizarSelectsPremios();
         mostrarSaldos();
+        mostrarHistorialRondas();
     }
 
     function copiarWhatsApp() {
         let rondaActual = obtenerRondaActual();
-        let texto = `📋 *LISTA DE LÍNEAS - RONDA ${rondaActual}* 📋\n\n`;
+        let valorLinea = document.getElementById('valor_linea_config').value;
+        let texto = `📋 *LISTA DE LÍNEAS - RONDA ${rondaActual}* 📋\n`;
+        if(valorLinea) texto += `_Costo de línea: ${valorLinea}_\n\n`;
+        else texto += `\n`;
+
         let asignadas = 0;
 
         for (let i = 1; i <= totalLineas; i++) {
             let val = document.getElementById('select_linea_' + i).value.trim();
+            let estado = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
+            let etiquetaPago = (estado === 'pagado') ? '*(Pagado)*' : '_(Pendiente)_';
+
             if (val !== "") {
-                texto += `${i} - *${val}*\n`;
+                texto += `${i} - *${val}* ${etiquetaPago}\n`;
                 asignadas++;
             } else {
                 texto += `${i} - _Disponible_\n`;
@@ -394,7 +521,7 @@
         texto += `\nTotal asignadas: ${asignadas}/15`;
 
         navigator.clipboard.writeText(texto).then(() => {
-            alert("¡Lista copiada para WhatsApp de forma limpia!");
+            alert("¡Lista ordenada copiada para WhatsApp!");
         });
     }
 
@@ -402,6 +529,7 @@
         if (confirm("¿Vaciar las 15 líneas de esta ronda?")) {
             for (let i = 1; i <= totalLineas; i++) {
                 localStorage.removeItem('linea_ronda_' + i);
+                localStorage.removeItem('estado_pago_linea_' + i);
             }
             renderizarLineas();
         }
@@ -409,7 +537,10 @@
 
     function guardarRonda() {
         let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+        let historial = JSON.parse(localStorage.getItem('historial_rondas_lista') || '[]');
+        let rondaActual = obtenerRondaActual();
         let registradas = 0;
+        let resumenRondaText = `Ronda ${rondaActual}: `;
 
         for (let p = 1; p <= 4; p++) {
             let nombre = document.getElementById('ganadora_' + p).value.trim();
@@ -417,33 +548,80 @@
 
             if (nombre !== "" && monto > 0) {
                 if (!saldos[nombre]) saldos[nombre] = 0;
-                saldos[nombre] += monto;
+                saldos[nombre] += monto; // SUMA AUTOMÁTICA DEL PREMIO
                 registradas++;
+                resumenRondaText += `[${p}º: ${nombre} (+${monto})] `;
             }
         }
 
         if (registradas > 0) {
             localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
             
-            // Limpiar campos de premios
+            // Guardar en el historial de rondas
+            historial.push(resumenRondaText);
+            localStorage.setItem('historial_rondas_lista', JSON.stringify(historial));
+            
+            // Limpiar campos de ganadoras de esta ronda
             for (let p = 1; p <= 4; p++) {
                 document.getElementById('ganadora_' + p).value = '';
-                document.getElementById('monto_' + p).value = '';
             }
 
-            // Limpiar las 15 líneas para prepararlas para la siguiente ronda
+            // VACIAR COMPLETAMENTE LAS 15 LÍNEAS PARA LA NUEVA RONDA (PERO LOS SALDOS QUEDAN)
             for (let i = 1; i <= totalLineas; i++) {
                 localStorage.removeItem('linea_ronda_' + i);
+                localStorage.removeItem('estado_pago_linea_' + i);
             }
 
-            // Incrementar el número de la ronda automáticamente
-            let nuevaRonda = obtenerRondaActual() + 1;
+            let nuevaRonda = rondaActual + 1;
             localStorage.setItem('numero_ronda', nuevaRonda);
 
             actualizarTodo();
-            alert(`¡Ronda guardada con éxito! Pasando automáticamente a la Ronda ${nuevaRonda}.`);
+            alert(`¡Ronda ${rondaActual} guardada y saldos sumados! Pasando a la Ronda ${nuevaRonda}. Las líneas se han vaciado limpias.`);
         } else {
             alert("Por favor selecciona al menos una ganadora y su monto.");
+        }
+    }
+
+    function ajustarSaldoManual(nombre) {
+        let montoStr = prompt(`Ajustar saldo para ${nombre}:\nEscribe un número positivo (ej: 50 para sumar) o negativo (ej: -20 para descontar):`);
+        if (montoStr !== null && montoStr.trim() !== "") {
+            let cambio = parseFloat(montoStr);
+            if (!isNaN(cambio)) {
+                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                if (!saldos[nombre]) saldos[nombre] = 0;
+                saldos[nombre] += cambio;
+                
+                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+                actualizarTodo();
+            } else {
+                alert("Por favor introduce un número válido.");
+            }
+        }
+    }
+
+    function descontarValorLinea(nombre) {
+        let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
+        if (valorLinea <= 0) {
+            alert("Primero define el costo de la línea en la parte superior.");
+            return;
+        }
+
+        if (confirm(`¿Descontar el valor de la línea (${valorLinea}) del saldo de ${nombre}?`)) {
+            let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+            if (!saldos[nombre]) saldos[nombre] = 0;
+            saldos[nombre] -= valorLinea; // RESTA AUTOMÁTICA DEL VALOR DE LA LÍNEA
+
+            localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+            actualizarTodo();
+        }
+    }
+
+    function liquidarJugadora(nombre) {
+        if (confirm(`¿Ya le transferiste o pagaste a ${nombre}? Esto dejará su saldo en cero y la borrará de la lista.`)) {
+            let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+            delete saldos[nombre];
+            localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+            actualizarTodo();
         }
     }
 
@@ -459,25 +637,54 @@
 
         let html = "";
         keys.forEach(nombre => {
-            html += `<b>${nombre}:</b> +${saldos[nombre]}<br>`;
+            let valor = saldos[nombre];
+            html += `
+                <div class="saldo-row">
+                    <span><b>${nombre}:</b> ${valor >= 0 ? '+' + valor : valor}</span>
+                    <div class="saldo-actions">
+                        <button class="btn-descontar" onclick="descontarValorLinea('${nombre}')" title="Descuenta el costo de la línea actual">- Línea</button>
+                        <button class="btn-add" onclick="ajustarSaldoManual('${nombre}')">+/-</button>
+                        <button class="btn-liquidar" onclick="liquidarJugadora('${nombre}')">Pagar (0)</button>
+                    </div>
+                </div>`;
         });
         divSaldos.innerHTML = html;
     }
 
+    function mostrarHistorialRondas() {
+        let divHistorial = document.getElementById('historial-rondas');
+        let historial = JSON.parse(localStorage.getItem('historial_rondas_lista') || '[]');
+
+        if (historial.length === 0) {
+            divHistorial.innerHTML = "<em>Aún no hay rondas finalizadas.</em>";
+            return;
+        }
+
+        let html = "";
+        historial.forEach((item, index) => {
+            html += `<div>• <b>Ronda ${index + 1}:</b> ${item}</div>`;
+        });
+        divHistorial.innerHTML = html;
+    }
+
     function reiniciarDia() {
-        let confirmacion1 = confirm("⚠️ ¿Estás COMPLETAMENTE SEGURA de reiniciar el día? Esto borrará todos los saldos, las líneas y pondrá la ronda en 1.");
+        let confirmacion1 = confirm("⚠️ ¿Reiniciar el día? Se borrarán todos los saldos, líneas, historial y la ronda volverá a 1.");
         if (confirmacion1) {
-            let confirmacion2 = prompt("Escribe la palabra 'BORRAR' para confirmar el reinicio total:");
+            let confirmacion2 = prompt("Escribe la palabra 'BORRAR' para confirmar:");
             if (confirmacion2 && confirmacion2.toUpperCase() === "BORRAR") {
                 for (let i = 1; i <= totalLineas; i++) {
                     localStorage.removeItem('linea_ronda_' + i);
+                    localStorage.removeItem('estado_pago_linea_' + i);
                 }
                 localStorage.removeItem('saldos_jugadoras');
+                localStorage.removeItem('historial_rondas_lista');
                 localStorage.setItem('numero_ronda', '1');
+                for(let p=1; p<=4; p++) {
+                    localStorage.removeItem('premio_monto_def_' + p);
+                }
+                localStorage.removeItem('valor_linea_costo');
                 actualizarTodo();
-                alert("¡Día reiniciado con éxito y vuelta a la Ronda 1!");
-            } else {
-                alert("Operación cancelada. Tus datos están a salvo.");
+                alert("¡Día reiniciado con éxito!");
             }
         }
     }
