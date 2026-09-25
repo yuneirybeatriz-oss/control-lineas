@@ -12,6 +12,7 @@
             --white: #ffffff;
             --success: #2ed573;
             --whatsapp: #25d366;
+            --danger: #ff6b81;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -39,7 +40,19 @@
             color: #666;
             font-size: 13px;
             margin-top: 0;
+            margin-bottom: 10px;
+        }
+        /* Indicador de Ronda Actual */
+        .ronda-indicator {
+            background: #2f3542;
+            color: white;
+            text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
             margin-bottom: 15px;
+            letter-spacing: 0.5px;
         }
         .section-title {
             font-size: 16px;
@@ -64,10 +77,23 @@
             transition: 0.2s;
         }
         .btn-whatsapp { background-color: var(--whatsapp); color: white; flex: 1; }
-        .btn-clear { background-color: var(--primary); color: white; flex: 1; }
+        .btn-clear { background-color: var(--secondary); color: white; flex: 1; }
         .btn-add { background-color: var(--success); color: white; }
-        .btn-delete { background-color: #ff4757; color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; }
-        .btn-reset-day { background-color: #ffa502; color: white; width: 100%; margin-top: 15px; }
+        .btn-delete { background-color: var(--primary); color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; }
+        
+        .danger-zone {
+            margin-top: 35px;
+            padding-top: 15px;
+            border-top: 2px dashed #ff4757;
+            text-align: center;
+        }
+        .btn-reset-day { 
+            background-color: #ff4757; 
+            color: white; 
+            width: 100%; 
+            padding: 12px;
+            font-size: 14px;
+        }
         
         .line-row {
             display: flex;
@@ -159,7 +185,10 @@
 
 <div class="container">
     <h2>Control de Líneas - Yune</h2>
-    <p class="subtitle">Jugadoras fijas, líneas y saldos positivos</p>
+    <p class="subtitle">Gestión limpia y organizada</p>
+
+    <!-- INDICADOR DE RONDA -->
+    <div class="ronda-indicator" id="display-ronda">RONDA 1</div>
 
     <!-- ADMINISTRAR JUGADORAS FIJAS -->
     <div class="section-title">Mis Jugadoras Habituales</div>
@@ -175,7 +204,7 @@
 
     <!-- ACCIONES DE LÍNEAS -->
     <div class="actions-top" style="margin-top: 15px;">
-        <button class="btn-whatsapp" onclick="copiarWhatsApp()">📋 Copiar Líneas</button>
+        <button class="btn-whatsapp" onclick="copiarWhatsApp()">📋 Copiar para WhatsApp</button>
         <button class="btn-clear" onclick="limpiarLineasRonda()">🧹 Vaciar Líneas</button>
     </div>
 
@@ -206,7 +235,7 @@
             <input type="number" id="monto_4" placeholder="Premio" style="margin-top:5px;">
         </div>
     </div>
-    <button class="btn-whatsapp" onclick="guardarRonda()" style="width:100%; margin-bottom: 10px;">💾 Guardar Premios de Ronda</button>
+    <button class="btn-whatsapp" onclick="guardarRonda()" style="width:100%; margin-bottom: 10px;">💾 Guardar Premios y Avanzar Ronda</button>
 
     <!-- SALDOS -->
     <div class="section-title">Saldos Positivos Acumulados</div>
@@ -214,11 +243,23 @@
         <em>Aún no hay saldos acumulados.</em>
     </div>
 
-    <button class="btn-reset-day" onclick="reiniciarDia()">⚠️ Reiniciar Día (Borrar Todo)</button>
+    <!-- ZONA DE PELIGRO -->
+    <div class="danger-zone">
+        <button class="btn-reset-day" onclick="reiniciarDia()">⚠️ Reiniciar Día (Borrar Todo y Saldos)</button>
+    </div>
 </div>
 
 <script>
     const totalLineas = 15;
+
+    function obtenerRondaActual() {
+        return parseInt(localStorage.getItem('numero_ronda') || '1');
+    }
+
+    function actualizarIndicadorRonda() {
+        let ronda = obtenerRondaActual();
+        document.getElementById('display-ronda').textContent = `RONDA ${ronda}`;
+    }
 
     function obtenerJugadorasFijas() {
         return JSON.parse(localStorage.getItem('jugadoras_fijas') || '[]');
@@ -329,6 +370,7 @@
     }
 
     function actualizarTodo() {
+        actualizarIndicadorRonda();
         renderizarJugadorasFijas();
         renderizarLineas();
         actualizarSelectsPremios();
@@ -336,22 +378,23 @@
     }
 
     function copiarWhatsApp() {
-        let texto = "📋 *CONTROL DE LÍNEAS* 📋\n\n";
+        let rondaActual = obtenerRondaActual();
+        let texto = `📋 *LISTA DE LÍNEAS - RONDA ${rondaActual}* 📋\n\n`;
         let asignadas = 0;
 
         for (let i = 1; i <= totalLineas; i++) {
             let val = document.getElementById('select_linea_' + i).value.trim();
             if (val !== "") {
-                texto += `Línea ${i}: *${val}*\n`;
+                texto += `${i} - *${val}*\n`;
                 asignadas++;
             } else {
-                texto += `Línea ${i}: _Disponible_\n`;
+                texto += `${i} - _Disponible_\n`;
             }
         }
         texto += `\nTotal asignadas: ${asignadas}/15`;
 
         navigator.clipboard.writeText(texto).then(() => {
-            alert("¡Lista copiada para WhatsApp!");
+            alert("¡Lista copiada para WhatsApp de forma limpia!");
         });
     }
 
@@ -381,12 +424,24 @@
 
         if (registradas > 0) {
             localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+            
+            // Limpiar campos de premios
             for (let p = 1; p <= 4; p++) {
                 document.getElementById('ganadora_' + p).value = '';
                 document.getElementById('monto_' + p).value = '';
             }
-            mostrarSaldos();
-            alert("¡Premios registrados y sumados al saldo positivo!");
+
+            // Limpiar las 15 líneas para prepararlas para la siguiente ronda
+            for (let i = 1; i <= totalLineas; i++) {
+                localStorage.removeItem('linea_ronda_' + i);
+            }
+
+            // Incrementar el número de la ronda automáticamente
+            let nuevaRonda = obtenerRondaActual() + 1;
+            localStorage.setItem('numero_ronda', nuevaRonda);
+
+            actualizarTodo();
+            alert(`¡Ronda guardada con éxito! Pasando automáticamente a la Ronda ${nuevaRonda}.`);
         } else {
             alert("Por favor selecciona al menos una ganadora y su monto.");
         }
@@ -410,14 +465,20 @@
     }
 
     function reiniciarDia() {
-        if (confirm("¿Reiniciar todo el día? Se borrarán las líneas actuales y los saldos para arrancar una nueva jornada.")) {
-            // Mantenemos las jugadoras fijas registradas, pero limpiamos rondas y saldos
-            for (let i = 1; i <= totalLineas; i++) {
-                localStorage.removeItem('linea_ronda_' + i);
+        let confirmacion1 = confirm("⚠️ ¿Estás COMPLETAMENTE SEGURA de reiniciar el día? Esto borrará todos los saldos, las líneas y pondrá la ronda en 1.");
+        if (confirmacion1) {
+            let confirmacion2 = prompt("Escribe la palabra 'BORRAR' para confirmar el reinicio total:");
+            if (confirmacion2 && confirmacion2.toUpperCase() === "BORRAR") {
+                for (let i = 1; i <= totalLineas; i++) {
+                    localStorage.removeItem('linea_ronda_' + i);
+                }
+                localStorage.removeItem('saldos_jugadoras');
+                localStorage.setItem('numero_ronda', '1');
+                actualizarTodo();
+                alert("¡Día reiniciado con éxito y vuelta a la Ronda 1!");
+            } else {
+                alert("Operación cancelada. Tus datos están a salvo.");
             }
-            localStorage.removeItem('saldos_jugadoras');
-            actualizarTodo();
-            alert("¡Día reiniciado con éxito!");
         }
     }
 
