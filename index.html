@@ -121,7 +121,6 @@
             background: white;
         }
         
-        /* Botón de estado estilizado con iconos elegantes */
         .btn-pago {
             padding: 6px 10px;
             font-size: 14px;
@@ -440,19 +439,21 @@
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
                 let estadoAnterior = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
 
+                // Si quitamos a una jugadora de esta línea y su estado era pendiente (no pagado con check), se le devuelve el saldo descontado
                 if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora) {
-                    if (valorLinea > 0 && saldos[anteriorJugadora] !== undefined && estadoAnterior !== 'pagado') {
+                    if (valorLinea > 0 && estadoAnterior !== 'pagado') {
+                        if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
                         saldos[anteriorJugadora] += valorLinea; 
                     }
                 }
 
+                // Si seleccionamos a una nueva jugadora, se le descuenta el valor de la línea de su saldo
                 if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
-                    if (valorLinea > 0 && saldos[nuevaJugadora] !== undefined && saldos[nuevaJugadora] > 0) {
+                    if (valorLinea > 0) {
+                        if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
                         saldos[nuevaJugadora] -= valorLinea; 
-                        localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
-                    } else {
-                        localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
                     }
+                    localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
                 }
 
                 localStorage.setItem('linea_ronda_' + i, nuevaJugadora);
@@ -462,14 +463,14 @@
 
                 localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarLineas();
+                actualizarSelectsPremios();
                 mostrarSaldos();
             });
 
-            // Botón con símbolos elegantes (🔄 para pendiente / ✔ para pagado)
             let btnPago = document.createElement('button');
             btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
-            btnPago.title = estadoPago === 'pagado' ? 'Pagado (Clic para cambiar a pendiente)' : 'Pendiente (Clic para marcar como pagado)';
+            btnPago.title = estadoPago === 'pagado' ? 'Pagado (clic para volver a pendiente)' : 'Pendiente (clic para marcar como pagado)';
             
             btnPago.addEventListener('click', function() {
                 let nombreJugadora = select.value;
@@ -479,14 +480,28 @@
                 }
 
                 let estadoActual = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
+                let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
+                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
                 if (estadoActual === 'pendiente') {
+                    // Al marcarlo como pagado (✔), si estaba debiendo esa línea, se lo abonamos para que su saldo suba y quede en cero/neutral
                     localStorage.setItem('estado_pago_linea_' + i, 'pagado');
+                    if (valorLinea > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] += valorLinea;
+                    }
                 } else {
+                    // Si se desmarca, vuelve a quedar pendiente y se le descuenta de nuevo
                     localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                    if (valorLinea > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] -= valorLinea;
+                    }
                 }
 
+                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarLineas();
+                mostrarSaldos();
             });
 
             row.appendChild(num);
@@ -498,19 +513,38 @@
         }
     }
 
+    function obtenerJugadorasParticipantesRonda() {
+        let participantes = [];
+        for (let i = 1; i <= totalLineas; i++) {
+            let jugadora = localStorage.getItem('linea_ronda_' + i) || '';
+            if (jugadora !== "" && !participantes.includes(jugadora)) {
+                participantes.push(jugadora);
+            }
+        }
+        participantes.sort();
+        return participantes;
+    }
+
     function actualizarSelectsPremios() {
-        let listaFijas = obtenerJugadorasFijas();
+        let participantes = obtenerJugadorasParticipantesRonda();
+        
         for (let p = 1; p <= 4; p++) {
             let sel = document.getElementById('ganadora_' + p);
             let actual = sel.value;
+            
             sel.innerHTML = '<option value="">-- Seleccionar --</option>';
-            listaFijas.forEach(nombre => {
+            
+            participantes.forEach(nombre => {
                 let opt = document.createElement('option');
                 opt.value = nombre;
                 opt.textContent = nombre;
                 if (nombre === actual) opt.selected = true;
                 sel.appendChild(opt);
             });
+            
+            if (actual !== "" && !participantes.includes(actual)) {
+                sel.value = "";
+            }
             
             let montoGuardado = localStorage.getItem('premio_monto_def_' + p);
             if (montoGuardado && !document.getElementById('monto_' + p).value) {
@@ -563,12 +597,12 @@
     }
 
     function limpiarLineasRonda() {
-        if (confirm("¿Vaciar las 15 líneas de esta ronda?")) {
+        if (confirm("¿Vaciar las 15 líneas de esta ronda? Nota: Los saldos pendientes de las líneas no pagadas se mantienen registrados.")) {
             for (let i = 1; i <= totalLineas; i++) {
                 localStorage.removeItem('linea_ronda_' + i);
                 localStorage.removeItem('estado_pago_linea_' + i);
             }
-            renderizarLineas();
+            actualizarTodo();
         }
     }
 
@@ -655,9 +689,10 @@
         let html = "";
         keys.forEach(nombre => {
             let valor = saldos[nombre];
+            let colorEstilo = valor < 0 ? 'color: #ff4757; font-weight: bold;' : 'color: #2ed573; font-weight: bold;';
             html += `
                 <div class="saldo-row">
-                    <span><b>${nombre}:</b> ${valor >= 0 ? '+' + valor : valor}</span>
+                    <span><b>${nombre}:</b> <span style="${colorEstilo}">${valor >= 0 ? '+' + valor : valor}</span></span>
                     <div class="saldo-actions">
                         <button class="btn-add" onclick="ajustarSaldoManual('${nombre}')">+/-</button>
                         <button class="btn-liquidar" onclick="liquidarJugadora('${nombre}')">Pagar (0)</button>
