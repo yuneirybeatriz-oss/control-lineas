@@ -311,7 +311,7 @@
     <button class="btn-whatsapp" onclick="guardarRonda()" style="width:100%; margin-bottom: 10px;">💾 Guardar Premios y Avanzar Ronda</button>
 
     <!-- SALDOS Y AJUSTES -->
-    <div class="section-title">Saldos Positivos / Liquidación</div>
+    <div class="section-title">Saldos (Positivos / Negativos)</div>
     <div id="lista-saldos" style="background: #f8f9fa; padding: 8px; border-radius: 8px; margin-bottom: 10px;">
         <em>Aún no hay saldos acumulados.</em>
     </div>
@@ -439,7 +439,7 @@
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
                 let estadoAnterior = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
 
-                // Si quitamos a una jugadora de esta línea y su estado era pendiente (no pagado con check), se le devuelve el saldo descontado
+                // Si quitamos a una jugadora y su estado era pendiente, le devolvemos el saldo descontado
                 if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora) {
                     if (valorLinea > 0 && estadoAnterior !== 'pagado') {
                         if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
@@ -447,7 +447,7 @@
                     }
                 }
 
-                // Si seleccionamos a una nueva jugadora, se le descuenta el valor de la línea de su saldo
+                // Si seleccionamos a una nueva jugadora, se le descuenta el valor de la línea (creando o aumentando negativo)
                 if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
                     if (valorLinea > 0) {
                         if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
@@ -470,7 +470,7 @@
             let btnPago = document.createElement('button');
             btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
-            btnPago.title = estadoPago === 'pagado' ? 'Pagado (clic para volver a pendiente)' : 'Pendiente (clic para marcar como pagado)';
+            btnPago.title = estadoPago === 'pagado' ? 'Pagado' : 'Pendiente';
             
             btnPago.addEventListener('click', function() {
                 let nombreJugadora = select.value;
@@ -484,7 +484,7 @@
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
                 if (estadoActual === 'pendiente') {
-                    // Al marcarlo como pagado (✔), si estaba debiendo esa línea, se lo abonamos para que su saldo suba y quede en cero/neutral
+                    // Al marcar como pagado (✔), se abona el valor para limpiar el negativo de esa línea
                     localStorage.setItem('estado_pago_linea_' + i, 'pagado');
                     if (valorLinea > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
@@ -542,6 +542,7 @@
                 sel.appendChild(opt);
             });
             
+            // Si la ganadora seleccionada ya no está en las líneas de esta ronda, se limpia
             if (actual !== "" && !participantes.includes(actual)) {
                 sel.value = "";
             }
@@ -597,7 +598,7 @@
     }
 
     function limpiarLineasRonda() {
-        if (confirm("¿Vaciar las 15 líneas de esta ronda? Nota: Los saldos pendientes de las líneas no pagadas se mantienen registrados.")) {
+        if (confirm("¿Vaciar las 15 líneas de esta ronda?")) {
             for (let i = 1; i <= totalLineas; i++) {
                 localStorage.removeItem('linea_ronda_' + i);
                 localStorage.removeItem('estado_pago_linea_' + i);
@@ -619,7 +620,7 @@
 
             if (nombre !== "" && monto > 0) {
                 if (!saldos[nombre]) saldos[nombre] = 0;
-                saldos[nombre] += monto; 
+                saldos[nombre] += monto; // Suma el premio (si tenía negativo, se compensa automáticamente)
                 registradas++;
                 resumenRondaText += `[${p}º: ${nombre} (+${monto})] `;
             }
@@ -668,7 +669,7 @@
     }
 
     function liquidarJugadora(nombre) {
-        if (confirm(`¿Ya le transferiste o pagaste a ${nombre}? Esto dejará saldo en cero y la borrará de la lista.`)) {
+        if (confirm(`¿Ya le pagaste o te pagó ${nombre}? Esto dejará su saldo en cero y la retirará de la lista.`)) {
             let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
             delete saldos[nombre];
             localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
@@ -690,9 +691,10 @@
         keys.forEach(nombre => {
             let valor = saldos[nombre];
             let colorEstilo = valor < 0 ? 'color: #ff4757; font-weight: bold;' : 'color: #2ed573; font-weight: bold;';
+            let textoValor = valor >= 0 ? '+' + valor : valor;
             html += `
                 <div class="saldo-row">
-                    <span><b>${nombre}:</b> <span style="${colorEstilo}">${valor >= 0 ? '+' + valor : valor}</span></span>
+                    <span><b>${nombre}:</b> <span style="${colorEstilo}">${textoValor}</span></span>
                     <div class="saldo-actions">
                         <button class="btn-add" onclick="ajustarSaldoManual('${nombre}')">+/-</button>
                         <button class="btn-liquidar" onclick="liquidarJugadora('${nombre}')">Pagar (0)</button>
