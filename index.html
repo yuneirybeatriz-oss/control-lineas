@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Líneas - Yune</title>
+    <title>Control de Líneas y Saldo - Yune</title>
     <style>
         :root {
             --primary: #ff4757;
@@ -11,13 +11,14 @@
             --bg: #f1f2f6;
             --white: #ffffff;
             --success: #2ed573;
+            --whatsapp: #25d366;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg);
             margin: 0;
             padding: 10px;
-            color: var(--secondary);
+            color: #333;
         }
         .container {
             max-width: 500px;
@@ -27,284 +28,400 @@
             border-radius: 12px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
-        h2, h3 {
+        h2 {
             text-align: center;
             color: var(--secondary);
-            margin-bottom: 10px;
-        }
-        .card {
-            background: #f8f9fa;
-            border: 1px solid #dfe4ea;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 12px;
-        }
-        label {
-            font-weight: bold;
-            font-size: 14px;
-            display: block;
             margin-bottom: 5px;
+            font-size: 22px;
         }
-        input, select {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ced6e0;
-            border-radius: 6px;
-            font-size: 16px;
-            box-sizing: border-box;
+        p.subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            margin-top: 0;
+            margin-bottom: 15px;
         }
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--primary);
-            color: var(--white);
-            border: none;
-            border-radius: 6px;
+        .section-title {
             font-size: 16px;
             font-weight: bold;
-            cursor: pointer;
-            margin-bottom: 8px;
+            color: var(--secondary);
+            margin: 15px 0 8px 0;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 3px;
         }
-        button:active {
-            opacity: 0.8;
-        }
-        .btn-secondary {
-            background-color: #747d8c;
-        }
-        .btn-success {
-            background-color: var(--success);
-        }
-        .linea-row {
+        .actions-top {
             display: flex;
             gap: 8px;
-            margin-bottom: 8px;
-            align-items: center;
+            margin-bottom: 15px;
         }
-        .linea-row span {
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
             font-weight: bold;
-            min-width: 65px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-        th, td {
-            border: 1px solid #dfe4ea;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f1f2f6;
-        }
-        .actions-cell {
+        .btn-whatsapp { background-color: var(--whatsapp); color: white; flex: 1; }
+        .btn-clear { background-color: var(--primary); color: white; flex: 1; }
+        .btn-add { background-color: var(--success); color: white; }
+        .btn-delete { background-color: #ff4757; color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; }
+        .btn-reset-day { background-color: #ffa502; color: white; width: 100%; margin-top: 15px; }
+        
+        .line-row {
             display: flex;
-            gap: 5px;
+            align-items: center;
+            background: #f8f9fa;
+            margin-bottom: 6px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid #e1e1e1;
         }
-        .actions-cell button {
-            padding: 5px 8px;
+        .line-number {
+            font-weight: bold;
+            font-size: 15px;
+            color: var(--primary);
+            width: 40px;
+            flex-shrink: 0;
+        }
+        .line-select {
+            flex-grow: 1;
+            padding: 7px 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            background: white;
+        }
+        .line-select:focus { border-color: var(--primary); }
+
+        .premios-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .premio-box {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #e1e1e1;
+        }
+        .premio-box label {
             font-size: 12px;
-            margin: 0;
-            width: auto;
+            font-weight: bold;
+            color: #555;
+            display: block;
+            margin-bottom: 3px;
+        }
+        .premio-box input, .premio-box select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 13px;
+            box-sizing: border-box;
+        }
+        .registry-box {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e1e1e1;
+            margin-bottom: 10px;
+        }
+        .registry-input-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .registry-input-row input {
+            flex-grow: 1;
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .jugadora-tag {
+            display: inline-flex;
+            align-items: center;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin: 2px;
+            font-size: 13px;
+            gap: 6px;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🎯 Control de Líneas y Rondas</h2>
-    
-    <!-- Control de Rondas -->
-    <div class="card">
-        <h3 id="ronda-titulo">Ronda 1</h3>
-        <button class="btn-success" onclick="siguienteRonda()">➡️ Pasar a Siguiente Ronda</button>
+    <h2>Control de Líneas - Yune</h2>
+    <p class="subtitle">Jugadoras fijas, líneas y saldos positivos</p>
+
+    <!-- ADMINISTRAR JUGADORAS FIJAS -->
+    <div class="section-title">Mis Jugadoras Habituales</div>
+    <div class="registry-box">
+        <div class="registry-input-row">
+            <input type="text" id="nueva_jugadora_nombre" placeholder="Nombre de la jugadora...">
+            <button class="btn-add" onclick="agregarJugadoraFija()">+ Agregar</button>
+        </div>
+        <div id="lista-jugadoras-fijas">
+            <em>No hay jugadoras fijas registradas. Añade una arriba.</em>
+        </div>
     </div>
 
-    <!-- Registro de Jugadoras -->
-    <div class="card">
-        <h3>Agregar Jugadora</h3>
-        <input type="text" id="nombre-jugadora" placeholder="Nombre de la jugadora">
-        <button onclick="agregarJugadora()">➕ Añadir a la Tanda</button>
+    <!-- ACCIONES DE LÍNEAS -->
+    <div class="actions-top" style="margin-top: 15px;">
+        <button class="btn-whatsapp" onclick="copiarWhatsApp()">📋 Copiar Líneas</button>
+        <button class="btn-clear" onclick="limpiarLineasRonda()">🧹 Vaciar Líneas</button>
     </div>
 
-    <!-- Registro de Líneas de la Ronda Actual -->
-    <div class="card">
-        <h3>🏆 Las 4 Líneas Ganadoras</h3>
-        <p style="font-size: 12px; color: #666; margin-top:0;">Selecciona quién ganó cada línea en esta ronda.</p>
-        
-        <div class="linea-row">
-            <span>Línea 1:</span>
-            <select id="ganadora-1"><option value="">-- Seleccionar --</option></select>
+    <div class="section-title">Asignación de las 15 Líneas (Ronda Actual)</div>
+    <div id="lista-lineas"></div>
+
+    <!-- PREMIOS -->
+    <div class="section-title">Registro de Premios de la Ronda</div>
+    <div class="premios-grid">
+        <div class="premio-box">
+            <label>1era Línea</label>
+            <select id="ganadora_1" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+            <input type="number" id="monto_1" placeholder="Premio" style="margin-top:5px;">
         </div>
-        <div class="linea-row">
-            <span>Línea 2:</span>
-            <select id="ganadora-2"><option value="">-- Seleccionar --</option></select>
+        <div class="premio-box">
+            <label>2da Línea</label>
+            <select id="ganadora_2" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+            <input type="number" id="monto_2" placeholder="Premio" style="margin-top:5px;">
         </div>
-        <div class="linea-row">
-            <span>Línea 3:</span>
-            <select id="ganadora-3"><option value="">-- Seleccionar --</option></select>
+        <div class="premio-box">
+            <label>3era Línea</label>
+            <select id="ganadora_3" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+            <input type="number" id="monto_3" placeholder="Premio" style="margin-top:5px;">
         </div>
-        <div class="linea-row">
-            <span>Línea 4:</span>
-            <select id="ganadora-4"><option value="">-- Seleccionar --</option></select>
+        <div class="premio-box">
+            <label>4ta Línea</label>
+            <select id="ganadora_4" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+            <input type="number" id="monto_4" placeholder="Premio" style="margin-top:5px;">
         </div>
-        
-        <label for="monto-linea">Premio / Valor por Línea ($):</label>
-        <input type="number" id="monto-linea" value="5">
-        
-        <button onclick="registrarGanadorasRonda()">💾 Registrar Líneas de esta Ronda</button>
+    </div>
+    <button class="btn-whatsapp" onclick="guardarRonda()" style="width:100%; margin-bottom: 10px;">💾 Guardar Premios de Ronda</button>
+
+    <!-- SALDOS -->
+    <div class="section-title">Saldos Positivos Acumulados</div>
+    <div id="lista-saldos" style="font-size: 14px; background: #f8f9fa; padding: 8px; border-radius: 8px; margin-bottom: 10px;">
+        <em>Aún no hay saldos acumulados.</em>
     </div>
 
-    <!-- Listado y Saldos -->
-    <div class="card">
-        <h3>💰 Positivos / Saldos Actuales</h3>
-        <div style="overflow-x: auto;">
-            <table id="tabla-saldos">
-                <thead>
-                    <tr>
-                        <th>Jugadora</th>
-                        <th>Saldo ($)</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-                <tbody id="cuerpo-tabla">
-                    <!-- Dinámico -->
-                </tbody>
-            </table>
-        </div>
-        <button class="btn-secondary" style="margin-top: 10px;" onclick="reiniciarTanda()">🔄 Reiniciar / Nueva Tanda</button>
-    </div>
+    <button class="btn-reset-day" onclick="reiniciarDia()">⚠️ Reiniciar Día (Borrar Todo)</button>
 </div>
 
 <script>
-    let rondaActual = 1;
-    let jugadoras = JSON.parse(localStorage.getItem('yune_lineas_jugadoras')) || [];
+    const totalLineas = 15;
 
-    function guardarDatos() {
-        localStorage.setItem('yune_lineas_jugadoras', JSON.stringify(jugadoras));
+    function obtenerJugadorasFijas() {
+        return JSON.parse(localStorage.getItem('jugadoras_fijas') || '[]');
     }
 
-    function actualizarInterfaz() {
-        document.getElementById('ronda-titulo').innerText = `Ronda ${rondaActual}`;
-        
-        let selects = ['ganadora-1', 'ganadora-2', 'ganadora-3', 'ganadora-4'];
-        selects.forEach(id => {
-            let select = document.getElementById(id);
-            let valorActual = select.value;
-            select.innerHTML = '<option value="">-- Seleccionar --</option>';
-            jugadoras.forEach(j => {
+    function guardarJugadorasFijas(lista) {
+        localStorage.setItem('jugadoras_fijas', JSON.stringify(lista));
+    }
+
+    function agregarJugadoraFija() {
+        let input = document.getElementById('nueva_jugadora_nombre');
+        let nombre = input.value.trim();
+        if (nombre === "") return;
+
+        let lista = obtenerJugadorasFijas();
+        if (!lista.includes(nombre)) {
+            lista.push(nombre);
+            lista.sort();
+            guardarJugadorasFijas(lista);
+            input.value = "";
+            actualizarTodo();
+        } else {
+            alert("Esta jugadora ya está en tu lista fija.");
+        }
+    }
+
+    function eliminarJugadoraFija(nombre) {
+        if (confirm(`¿Seguro que deseas eliminar a ${nombre} de tus jugadoras fijas?`)) {
+            let lista = obtenerJugadorasFijas();
+            lista = lista.filter(j => j !== nombre);
+            guardarJugadorasFijas(lista);
+            actualizarTodo();
+        }
+    }
+
+    function renderizarJugadorasFijas() {
+        let contenedorFijas = document.getElementById('lista-jugadoras-fijas');
+        let lista = obtenerJugadorasFijas();
+
+        if (lista.length === 0) {
+            contenedorFijas.innerHTML = "<em>No hay jugadoras fijas registradas. Añade una arriba.</em>";
+            return;
+        }
+
+        let html = "";
+        lista.forEach(nombre => {
+            html += `<span class="jugadora-tag">${nombre} <button class="btn-delete" onclick="eliminarJugadoraFija('${nombre}')">X</button></span>`;
+        });
+        contenedorFijas.innerHTML = html;
+    }
+
+    function renderizarLineas() {
+        let contenedorLineas = document.getElementById('lista-lineas');
+        contenedorLineas.innerHTML = '';
+        let listaFijas = obtenerJugadorasFijas();
+
+        for (let i = 1; i <= totalLineas; i++) {
+            let guardado = localStorage.getItem('linea_ronda_' + i) || '';
+
+            let row = document.createElement('div');
+            row.className = 'line-row';
+
+            let num = document.createElement('div');
+            num.className = 'line-number';
+            num.textContent = '#' + i;
+
+            let select = document.createElement('select');
+            select.className = 'line-select';
+            select.id = 'select_linea_' + i;
+
+            let optDefault = document.createElement('option');
+            optDefault.value = "";
+            optDefault.textContent = "-- Disponible --";
+            select.appendChild(optDefault);
+
+            listaFijas.forEach(nombre => {
                 let opt = document.createElement('option');
-                opt.value = j.nombre;
-                opt.innerText = j.nombre;
+                opt.value = nombre;
+                opt.textContent = nombre;
+                if (nombre === guardado) opt.selected = true;
                 select.appendChild(opt);
             });
-            select.value = valorActual;
-        });
 
-        let cuerpo = document.getElementById('cuerpo-tabla');
-        cuerpo.innerHTML = '';
-        if (jugadoras.length === 0) {
-            cuerpo.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#999;">No hay jugadoras agregadas</td></tr>`;
-            return;
+            select.addEventListener('change', function() {
+                localStorage.setItem('linea_ronda_' + i, select.value);
+            });
+
+            row.appendChild(num);
+            row.appendChild(select);
+            contenedorLineas.appendChild(row);
         }
-
-        jugadoras.forEach((j, index) => {
-            let fila = document.createElement('tr');
-            fila.innerHTML = `
-                <td><b>${j.nombre}</b></td>
-                <td>$${j.saldo.toFixed(2)}</td>
-                <td class="actions-cell">
-                    <button class="btn-success" onclick="saldarJugadora(${index})">Cobrar</button>
-                    <button class="btn-secondary" onclick="eliminarJugadora(${index})">X</button>
-                </td>
-            `;
-            cuerpo.appendChild(fila);
-        });
     }
 
-    function agregarJugadora() {
-        let input = document.getElementById('nombre-jugadora');
-        let nombre = input.value.trim();
-        if (!nombre) {
-            alert('Escribe el nombre de la jugadora');
-            return;
+    function actualizarSelectsPremios() {
+        let listaFijas = obtenerJugadorasFijas();
+        for (let p = 1; p <= 4; p++) {
+            let sel = document.getElementById('ganadora_' + p);
+            let actual = sel.value;
+            sel.innerHTML = '<option value="">-- Seleccionar --</option>';
+            listaFijas.forEach(nombre => {
+                let opt = document.createElement('option');
+                opt.value = nombre;
+                opt.textContent = nombre;
+                if (nombre === actual) opt.selected = true;
+                sel.appendChild(opt);
+            });
         }
-        if (jugadoras.some(j => j.nombre.toLowerCase() === nombre.toLowerCase())) {
-            alert('Esta jugadora ya está en la lista');
-            return;
-        }
-        jugadoras.push({ nombre: nombre, saldo: 0 });
-        input.value = '';
-        guardarDatos();
-        actualizarInterfaz();
     }
 
-    function registrarGanadorasRonda() {
-        let monto = parseFloat(document.getElementById('monto-linea').value) || 0;
-        let g1 = document.getElementById('ganadora-1').value;
-        let g2 = document.getElementById('ganadora-2').value;
-        let g3 = document.getElementById('ganadora-3').value;
-        let g4 = document.getElementById('ganadora-4').value;
+    function actualizarTodo() {
+        renderizarJugadorasFijas();
+        renderizarLineas();
+        actualizarSelectsPremios();
+        mostrarSaldos();
+    }
 
-        let ganadorasSeleccionadas = [g1, g2, g3, g4].filter(g => g !== "");
-        if (ganadorasSeleccionadas.length === 0) {
-            alert('Selecciona al menos una ganadora para esta ronda.');
-            return;
-        }
+    function copiarWhatsApp() {
+        let texto = "📋 *CONTROL DE LÍNEAS* 📋\n\n";
+        let asignadas = 0;
 
-        ganadorasSeleccionadas.forEach(nombreGanadora => {
-            let jugadora = jugadoras.find(j => j.nombre === nombreGanadora);
-            if (jugadora) {
-                jugadora.saldo += monto;
+        for (let i = 1; i <= totalLineas; i++) {
+            let val = document.getElementById('select_linea_' + i).value.trim();
+            if (val !== "") {
+                texto += `Línea ${i}: *${val}*\n`;
+                asignadas++;
+            } else {
+                texto += `Línea ${i}: _Disponible_\n`;
             }
+        }
+        texto += `\nTotal asignadas: ${asignadas}/15`;
+
+        navigator.clipboard.writeText(texto).then(() => {
+            alert("¡Lista copiada para WhatsApp!");
         });
-
-        guardarDatos();
-        actualizarInterfaz();
-
-        document.getElementById('ganadora-1').value = "";
-        document.getElementById('ganadora-2').value = "";
-        document.getElementById('ganadora-3').value = "";
-        document.getElementById('ganadora-4').value = "";
-
-        alert(`¡Ronda ${rondaActual} registrada con éxito!`);
     }
 
-    function siguienteRonda() {
-        rondaActual++;
-        actualizarInterfaz();
-    }
-
-    function saldarJugadora(index) {
-        let nombre = jugadoras[index].nombre;
-        let saldo = jugadoras[index].saldo;
-        if (confirm(`¿Retirar a ${nombre} con sus $${saldo.toFixed(2)}? Su saldo volverá a 0.`)) {
-            jugadoras[index].saldo = 0;
-            guardarDatos();
-            actualizarInterfaz();
+    function limpiarLineasRonda() {
+        if (confirm("¿Vaciar las 15 líneas de esta ronda?")) {
+            for (let i = 1; i <= totalLineas; i++) {
+                localStorage.removeItem('linea_ronda_' + i);
+            }
+            renderizarLineas();
         }
     }
 
-    function eliminarJugadora(index) {
-        if (confirm(`¿Eliminar a ${jugadoras[index].nombre}?`)) {
-            jugadoras.splice(index, 1);
-            guardarDatos();
-            actualizarInterfaz();
+    function guardarRonda() {
+        let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+        let registradas = 0;
+
+        for (let p = 1; p <= 4; p++) {
+            let nombre = document.getElementById('ganadora_' + p).value.trim();
+            let monto = parseFloat(document.getElementById('monto_' + p).value) || 0;
+
+            if (nombre !== "" && monto > 0) {
+                if (!saldos[nombre]) saldos[nombre] = 0;
+                saldos[nombre] += monto;
+                registradas++;
+            }
+        }
+
+        if (registradas > 0) {
+            localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+            for (let p = 1; p <= 4; p++) {
+                document.getElementById('ganadora_' + p).value = '';
+                document.getElementById('monto_' + p).value = '';
+            }
+            mostrarSaldos();
+            alert("¡Premios registrados y sumados al saldo positivo!");
+        } else {
+            alert("Por favor selecciona al menos una ganadora y su monto.");
         }
     }
 
-    function reiniciarTanda() {
-        if (confirm('¿Reiniciar toda la tanda y poner los saldos en cero?')) {
-            jugadoras.forEach(j => j.saldo = 0);
-            rondaActual = 1;
-            guardarDatos();
-            actualizarInterfaz();
+    function mostrarSaldos() {
+        let divSaldos = document.getElementById('lista-saldos');
+        let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+        let keys = Object.keys(saldos);
+
+        if (keys.length === 0) {
+            divSaldos.innerHTML = "<em>Aún no hay saldos acumulados.</em>";
+            return;
+        }
+
+        let html = "";
+        keys.forEach(nombre => {
+            html += `<b>${nombre}:</b> +${saldos[nombre]}<br>`;
+        });
+        divSaldos.innerHTML = html;
+    }
+
+    function reiniciarDia() {
+        if (confirm("¿Reiniciar todo el día? Se borrarán las líneas actuales y los saldos para arrancar una nueva jornada.")) {
+            // Mantenemos las jugadoras fijas registradas, pero limpiamos rondas y saldos
+            for (let i = 1; i <= totalLineas; i++) {
+                localStorage.removeItem('linea_ronda_' + i);
+            }
+            localStorage.removeItem('saldos_jugadoras');
+            actualizarTodo();
+            alert("¡Día reiniciado con éxito!");
         }
     }
 
-    actualizarInterfaz();
+    actualizarTodo();
 </script>
 
 </body>
