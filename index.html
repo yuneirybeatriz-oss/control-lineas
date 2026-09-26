@@ -439,7 +439,7 @@
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
                 let estadoAnterior = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
 
-                // Si quitamos a una jugadora y su estado era pendiente, le devolvemos el saldo descontado
+                // Si quitamos a una jugadora de la línea, revertimos el efecto anterior si no estaba pagado
                 if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora) {
                     if (valorLinea > 0 && estadoAnterior !== 'pagado') {
                         if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
@@ -449,16 +449,18 @@
 
                 // Si seleccionamos a una nueva jugadora
                 if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
-                    if (valorLinea > 0) {
-                        if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
+                    if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
+
+                    // VERIFICACIÓN AUTOMÁTICA DE SALDO POSITIVO
+                    if (saldos[nuevaJugadora] >= valorLinea && valorLinea > 0) {
+                        // Le restamos el costo de inmediato de su saldo positivo y se marca pagado
                         saldos[nuevaJugadora] -= valorLinea; 
-                    }
-                    
-                    // AUTOMÁTICO: Si la jugadora tiene saldo positivo acumulado, le descontamos de ahí de una vez y lo marcamos pagado
-                    if (saldos[nuevaJugadora] >= 0 && valorLinea > 0) {
-                        saldos[nuevaJugadora] += valorLinea; // Devuelve el monto restado momentáneamente
                         localStorage.setItem('estado_pago_linea_' + i, 'pagado');
                     } else {
+                        // Si no tiene saldo positivo suficiente, se le descuenta normal y queda pendiente
+                        if (valorLinea > 0) {
+                            saldos[nuevaJugadora] -= valorLinea;
+                        }
                         localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
                     }
                 }
@@ -491,14 +493,12 @@
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
                 if (estadoActual === 'pendiente') {
-                    // Al marcar como pagado, cambia a verde Y abonamos el valor para limpiar el negativo
                     localStorage.setItem('estado_pago_linea_' + i, 'pagado');
                     if (valorLinea > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                         saldos[nombreJugadora] += valorLinea; 
                     }
                 } else {
-                    // Si se desmarca, vuelve a pendiente y se le descuenta de nuevo
                     localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
                     if (valorLinea > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
@@ -606,6 +606,18 @@
     function limpiarLineasRonda() {
         if (confirm("¿Vaciar las 15 líneas de esta ronda?")) {
             for (let i = 1; i <= totalLineas; i++) {
+                let jugadora = localStorage.getItem('linea_ronda_' + i) || '';
+                let estado = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
+                let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
+
+                // Si vaciamos y estaba pendiente, devolvemos el saldo descontado
+                if (jugadora !== "" && estado !== 'pagado' && valorLinea > 0) {
+                    let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                    if (!saldos[jugadora]) saldos[jugadora] = 0;
+                    saldos[jugadora] += valorLinea;
+                    localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+                }
+
                 localStorage.removeItem('linea_ronda_' + i);
                 localStorage.removeItem('estado_pago_linea_' + i);
             }
