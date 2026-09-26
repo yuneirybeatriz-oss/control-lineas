@@ -442,7 +442,7 @@
                 if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora) {
                     if (valorLinea > 0) {
                         if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
-                        // ¡Devolvemos el dinero al saldo sin importar si estaba pagado o pendiente!
+                        // Le devolvemos el valor sumándoselo para anular el descuento (sube el negativo o positivo)
                         saldos[anteriorJugadora] += valorLinea; 
                     }
                 }
@@ -609,7 +609,6 @@
                 let jugadora = localStorage.getItem('linea_ronda_' + i) || '';
                 let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
 
-                // Si vaciamos, devolvemos el saldo de todas las líneas que estaban ocupadas
                 if (jugadora !== "" && valorLinea > 0) {
                     let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
                     if (!saldos[jugadora]) saldos[jugadora] = 0;
