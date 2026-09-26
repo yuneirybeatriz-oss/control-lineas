@@ -447,13 +447,20 @@
                     }
                 }
 
-                // Si seleccionamos a una nueva jugadora, se le descuenta el valor de la línea
+                // Si seleccionamos a una nueva jugadora
                 if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
                     if (valorLinea > 0) {
                         if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
                         saldos[nuevaJugadora] -= valorLinea; 
                     }
-                    localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                    
+                    // AUTOMÁTICO: Si la jugadora tiene saldo positivo acumulado, le descontamos de ahí de una vez y lo marcamos pagado
+                    if (saldos[nuevaJugadora] >= 0 && valorLinea > 0) {
+                        saldos[nuevaJugadora] += valorLinea; // Devuelve el monto restado momentáneamente
+                        localStorage.setItem('estado_pago_linea_' + i, 'pagado');
+                    } else {
+                        localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                    }
                 }
 
                 localStorage.setItem('linea_ronda_' + i, nuevaJugadora);
