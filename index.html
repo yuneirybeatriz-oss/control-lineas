@@ -447,7 +447,7 @@
                     }
                 }
 
-                // Si seleccionamos a una nueva jugadora, se le descuenta el valor de la línea (creando o aumentando negativo)
+                // Si seleccionamos a una nueva jugadora, se le descuenta el valor de la línea
                 if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
                     if (valorLinea > 0) {
                         if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
@@ -480,26 +480,14 @@
                 }
 
                 let estadoActual = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
-                let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
-                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
+                // Alternar estatus visual de pago de forma limpia sin tocar los saldos numéricos otra vez
                 if (estadoActual === 'pendiente') {
-                    // Al marcar como pagado (✔), se abona el valor para limpiar el negativo de esa línea
                     localStorage.setItem('estado_pago_linea_' + i, 'pagado');
-                    if (valorLinea > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] += valorLinea;
-                    }
                 } else {
-                    // Si se desmarca, vuelve a quedar pendiente y se le descuenta de nuevo
                     localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
-                    if (valorLinea > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] -= valorLinea;
-                    }
                 }
 
-                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarLineas();
                 mostrarSaldos();
             });
@@ -542,7 +530,6 @@
                 sel.appendChild(opt);
             });
             
-            // Si la ganadora seleccionada ya no está en las líneas de esta ronda, se limpia
             if (actual !== "" && !participantes.includes(actual)) {
                 sel.value = "";
             }
@@ -620,7 +607,7 @@
 
             if (nombre !== "" && monto > 0) {
                 if (!saldos[nombre]) saldos[nombre] = 0;
-                saldos[nombre] += monto; // Suma el premio (si tenía negativo, se compensa automáticamente)
+                saldos[nombre] += monto; 
                 registradas++;
                 resumenRondaText += `[${p}º: ${nombre} (+${monto})] `;
             }
