@@ -480,14 +480,26 @@
                 }
 
                 let estadoActual = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
+                let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
+                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
-                // Alternar estatus visual de pago de forma limpia sin tocar los saldos numéricos otra vez
                 if (estadoActual === 'pendiente') {
+                    // Al marcar como pagado, cambia a verde Y abonamos el valor para limpiar el negativo
                     localStorage.setItem('estado_pago_linea_' + i, 'pagado');
+                    if (valorLinea > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] += valorLinea; 
+                    }
                 } else {
+                    // Si se desmarca, vuelve a pendiente y se le descuenta de nuevo
                     localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                    if (valorLinea > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] -= valorLinea;
+                    }
                 }
 
+                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarLineas();
                 mostrarSaldos();
             });
