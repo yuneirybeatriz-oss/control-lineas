@@ -79,6 +79,7 @@
         .btn-add { background-color: var(--success); color: white; }
         .btn-delete { background-color: var(--primary); color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; }
         .btn-liquidar { background-color: var(--secondary); color: white; padding: 3px 6px; font-size: 11px; border-radius: 4px; }
+        .btn-copiar-privado { background-color: var(--whatsapp); color: white; padding: 3px 6px; font-size: 11px; border-radius: 4px; }
         
         .danger-zone {
             margin-top: 35px;
@@ -438,26 +439,20 @@
                 let nuevaJugadora = select.value;
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
-                // 1. SI QUITAMOS O CAMBIAMOS A UNA JUGADORA DE LA LÍNEA
                 if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora) {
                     if (valorLinea > 0) {
                         if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
-                        // Le devolvemos el valor sumándoselo para anular el descuento (sube el negativo o positivo)
                         saldos[anteriorJugadora] += valorLinea; 
                     }
                 }
 
-                // 2. SI SELECCIONAMOS A UNA NUEVA JUGADORA
                 if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
                     if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
 
-                    // VERIFICACIÓN AUTOMÁTICA DE SALDO POSITIVO
                     if (saldos[nuevaJugadora] >= valorLinea && valorLinea > 0) {
-                        // Tiene suficiente positivo: se le descuenta y queda marcada en verde (pagada)
                         saldos[nuevaJugadora] -= valorLinea; 
                         localStorage.setItem('estado_pago_linea_' + i, 'pagado');
                     } else {
-                        // No tiene suficiente positivo: se le descuenta como deuda y queda pendiente
                         if (valorLinea > 0) {
                             saldos[nuevaJugadora] -= valorLinea;
                         }
@@ -693,6 +688,14 @@
         }
     }
 
+    function copiarSaldoPrivado(valor) {
+        let rondaActual = obtenerRondaActual();
+        let texto = `Ronda ${rondaActual}: Ganaste +${valor} Bs`;
+        navigator.clipboard.writeText(texto).then(() => {
+            alert("¡Texto privado copiado! Ve al chat de la jugadora en WhatsApp y dale a pegar.");
+        });
+    }
+
     function mostrarSaldos() {
         let divSaldos = document.getElementById('lista-saldos');
         let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
@@ -708,10 +711,17 @@
             let valor = saldos[nombre];
             let colorEstilo = valor < 0 ? 'color: #ff4757; font-weight: bold;' : 'color: #2ed573; font-weight: bold;';
             let textoValor = valor >= 0 ? '+' + valor : valor;
+            
+            let btnCopiar = "";
+            if (valor > 0) {
+                btnCopiar = `<button class="btn-copiar-privado" onclick="copiarSaldoPrivado(${valor})">📲 Copiar WhatsApp</button>`;
+            }
+
             html += `
                 <div class="saldo-row">
                     <span><b>${nombre}:</b> <span style="${colorEstilo}">${textoValor}</span></span>
                     <div class="saldo-actions">
+                        ${btnCopiar}
                         <button class="btn-add" onclick="ajustarSaldoManual('${nombre}')">+/-</button>
                         <button class="btn-liquidar" onclick="liquidarJugadora('${nombre}')">Pagar (0)</button>
                     </div>
