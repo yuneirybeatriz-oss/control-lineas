@@ -690,7 +690,7 @@
 
     function copiarSaldoPrivado(valor) {
         let rondaActual = obtenerRondaActual();
-        let texto = `Ronda ${rondaActual}: Ganaste +${valor} Bs`;
+        let texto = `Ronda ${rondaActual}: +${valor} Bs`;
         navigator.clipboard.writeText(texto).then(() => {
             alert("¡Texto privado copiado! Ve al chat de la jugadora en WhatsApp y dale a pegar.");
         });
