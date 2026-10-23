@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Líneas y Saldo - Yune</title>
+    <title>Control de Líneas y Objetos - Yune</title>
     <style>
         :root {
             --primary: #ff4757;
@@ -13,6 +13,7 @@
             --success: #2ed573;
             --whatsapp: #25d366;
             --warning: #ffa502;
+            --accent: #3742fa;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -41,6 +42,33 @@
             font-size: 13px;
             margin-top: 0;
             margin-bottom: 10px;
+        }
+        .mode-selector {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 15px;
+        }
+        .btn-mode {
+            flex: 1;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 8px;
+            border: 2px solid #ced6e0;
+            background: #f1f2f6;
+            color: #57606f;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-mode.active-lineas {
+            background-color: var(--secondary);
+            color: white;
+            border-color: var(--secondary);
+        }
+        .btn-mode.active-objetos {
+            background-color: var(--accent);
+            color: white;
+            border-color: var(--accent);
         }
         .ronda-indicator {
             background: #2f3542;
@@ -252,64 +280,117 @@
 <body>
 
 <div class="container">
-    <h2>Control de Líneas - Yune</h2>
+    <h2>Control de Juego - Yune</h2>
     <p class="subtitle">Organizado y sin enredos</p>
+
+    <!-- SELECTOR DE MODO -->
+    <div class="mode-selector">
+        <button id="btn-modo-lineas" class="btn-mode active-lineas" onclick="cambiarModo('lineas')">📌 Control de Líneas (15)</button>
+        <button id="btn-modo-objetos" class="btn-mode" onclick="cambiarModo('objetos')">🎁 Control de Objetos (10)</button>
+    </div>
 
     <!-- INDICADOR DE RONDA -->
     <div class="ronda-indicator" id="display-ronda">RONDA 1</div>
 
-    <!-- CONFIGURACIÓN VALOR DE LÍNEA -->
-    <div class="config-box">
-        <label>Costo de cada Línea:</label>
-        <input type="number" id="valor_linea_config" placeholder="Ej: 5" oninput="guardarValorLinea()">
+    <!-- ================= CONTENEDOR MODO LÍNEAS ================= -->
+    <div id="seccion-lineas">
+        <!-- CONFIGURACIÓN VALOR DE LÍNEA -->
+        <div class="config-box">
+            <label>Costo de cada Línea:</label>
+            <input type="number" id="valor_linea_config" placeholder="Ej: 5" oninput="guardarValorLinea()">
+        </div>
+
+        <!-- JUGADORAS FIJAS -->
+        <div class="section-title">Mis Jugadoras Habituales</div>
+        <div class="registry-box">
+            <div class="registry-input-row">
+                <input type="text" id="nueva_jugadora_nombre" placeholder="Nombre de la jugadora...">
+                <button class="btn-add" onclick="agregarJugadoraFija()">+ Agregar</button>
+            </div>
+            <div id="lista-jugadoras-fijas">
+                <em>No hay jugadoras fijas registradas.</em>
+            </div>
+        </div>
+
+        <!-- ACCIONES DE LÍNEAS -->
+        <div class="actions-top" style="margin-top: 15px;">
+            <button class="btn-whatsapp" onclick="copiarWhatsApp()">📋 Copiar para WhatsApp</button>
+            <button class="btn-clear" onclick="limpiarLineasRonda()">🧹 Vaciar Líneas</button>
+        </div>
+
+        <div class="section-title">Asignación de las 15 Líneas (En Orden)</div>
+        <div id="lista-lineas"></div>
+
+        <!-- PREMIOS LÍNEAS -->
+        <div class="section-title">Registro de Premios de la Ronda</div>
+        <div class="premios-grid">
+            <div class="premio-box">
+                <label>1era Línea</label>
+                <select id="ganadora_1" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+                <input type="number" id="monto_1" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(1)">
+            </div>
+            <div class="premio-box">
+                <label>2da Línea</label>
+                <select id="ganadora_2" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+                <input type="number" id="monto_2" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(2)">
+            </div>
+            <div class="premio-box">
+                <label>3era Línea</label>
+                <select id="ganadora_3" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+                <input type="number" id="monto_3" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(3)">
+            </div>
+            <div class="premio-box">
+                <label>4ta Línea</label>
+                <select id="ganadora_4" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+                <input type="number" id="monto_4" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(4)">
+            </div>
+        </div>
+        <button class="btn-whatsapp" onclick="guardarRonda()" style="width:100%; margin-bottom: 10px;">💾 Guardar Premios y Avanzar Ronda</button>
     </div>
 
-    <!-- JUGADORAS FIJAS -->
-    <div class="section-title">Mis Jugadoras Habituales</div>
-    <div class="registry-box">
-        <div class="registry-input-row">
-            <input type="text" id="nueva_jugadora_nombre" placeholder="Nombre de la jugadora...">
-            <button class="btn-add" onclick="agregarJugadoraFija()">+ Agregar</button>
+    <!-- ================= CONTENEDOR MODO OBJETOS ================= -->
+    <div id="seccion-objetos" style="display: none;">
+        <!-- CONFIGURACIÓN VALOR DE OBJETO -->
+        <div class="config-box">
+            <label>Costo de cada Objeto:</label>
+            <input type="number" id="valor_objeto_config" placeholder="Ej: 1000" oninput="guardarValorObjeto()">
         </div>
-        <div id="lista-jugadoras-fijas">
-            <em>No hay jugadoras fijas registradas.</em>
-        </div>
-    </div>
 
-    <!-- ACCIONES DE LÍNEAS -->
-    <div class="actions-top" style="margin-top: 15px;">
-        <button class="btn-whatsapp" onclick="copiarWhatsApp()">📋 Copiar para WhatsApp</button>
-        <button class="btn-clear" onclick="limpiarLineasRonda()">🧹 Vaciar Líneas</button>
-    </div>
+        <!-- ACCIONES DE OBJETOS -->
+        <div class="actions-top" style="margin-top: 15px;">
+            <button class="btn-whatsapp" style="background-color: var(--accent);" onclick="copiarWhatsAppObjetos()">📋 Copiar Objetos WhatsApp</button>
+            <button class="btn-clear" onclick="limpiarObjetosRonda()">🧹 Vaciar Objetos</button>
+        </div>
 
-    <div class="section-title">Asignación de las 15 Líneas (En Orden)</div>
-    <div id="lista-lineas"></div>
+        <div class="section-title">Asignación de los 10 Objetos</div>
+        <div id="lista-objetos"></div>
 
-    <!-- PREMIOS -->
-    <div class="section-title">Registro de Premios de la Ronda</div>
-    <div class="premios-grid">
-        <div class="premio-box">
-            <label>1era Línea</label>
-            <select id="ganadora_1" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
-            <input type="number" id="monto_1" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(1)">
+        <!-- PREMIOS OBJETOS -->
+        <div class="section-title">Registro de Premios (Objetos)</div>
+        <div class="premios-grid">
+            <div class="premio-box">
+                <label>1er Lugar (Principal)</label>
+                <select id="ganadora_obj_1" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
+                <input type="number" id="monto_obj_1" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioObjTemporal(1)">
+            </div>
+            <div class="premio-box">
+                <label>2do Lugar</label>
+                <select id="ganadora_obj_2" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
+                <input type="number" id="monto_obj_2" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioObjTemporal(2)">
+            </div>
+            <div class="premio-box">
+                <label>3er Lugar</label>
+                <select id="ganadora_obj_3" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
+                <input type="number" id="monto_obj_3" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioObjTemporal(3)">
+            </div>
+            <div class="premio-box">
+                <label>4to Lugar</label>
+                <select id="ganadora_obj_4" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
+                <input type="number" id="monto_obj_4" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioObjTemporal(4)">
+            </div>
         </div>
-        <div class="premio-box">
-            <label>2da Línea</label>
-            <select id="ganadora_2" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
-            <input type="number" id="monto_2" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(2)">
-        </div>
-        <div class="premio-box">
-            <label>3era Línea</label>
-            <select id="ganadora_3" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
-            <input type="number" id="monto_3" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(3)">
-        </div>
-        <div class="premio-box">
-            <label>4ta Línea</label>
-            <select id="ganadora_4" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
-            <input type="number" id="monto_4" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(4)">
-        </div>
+        <button class="btn-whatsapp" style="background-color: var(--accent); width:100%; margin-bottom: 10px;" onclick="guardarRondaObjetos()">💾 Guardar Ronda Objetos y Avanzar</button>
     </div>
-    <button class="btn-whatsapp" onclick="guardarRonda()" style="width:100%; margin-bottom: 10px;">💾 Guardar Premios y Avanzar Ronda</button>
 
     <!-- SALDOS Y AJUSTES -->
     <div class="section-title">Saldos (Positivos / Negativos)</div>
@@ -331,6 +412,42 @@
 
 <script>
     const totalLineas = 15;
+    const totalObjetos = 10;
+    const listaObjetosNombres = [
+        "1 🪜 La Escalera",
+        "2 💍 El Anillo",
+        "3 🔑 La Llave",
+        "4 ⭐ La Estrella",
+        "5 👑 La Corona",
+        "6 🚗 El Carro",
+        "7 🎩 El Sombrero",
+        "8 🍼 La Botella",
+        "9 🏠 La Casa",
+        "10 ☀️ El Sol"
+    ];
+
+    function cambiarModo(modo) {
+        let btnLineas = document.getElementById('btn-modo-lineas');
+        let btnObjetos = document.getElementById('btn-modo-objetos');
+        let secLineas = document.getElementById('seccion-lineas');
+        let secObjetos = document.getElementById('seccion-objetos');
+
+        if (modo === 'lineas') {
+            btnLineas.className = 'btn-mode active-lineas';
+            btnObjetos.className = 'btn-mode';
+            secLineas.style.display = 'block';
+            secObjetos.style.display = 'none';
+            localStorage.setItem('modo_activo_yune', 'lineas');
+        } else {
+            btnLineas.className = 'btn-mode';
+            btnObjetos.className = 'btn-mode active-objetos';
+            secLineas.style.display = 'none';
+            secObjetos.style.display = 'block';
+            localStorage.setItem('modo_activo_yune', 'objetos');
+            renderizarObjetos();
+            actualizarSelectsPremiosObjetos();
+        }
+    }
 
     function obtenerRondaActual() {
         return parseInt(localStorage.getItem('numero_ronda') || '1');
@@ -348,6 +465,16 @@
     function cargarValorLinea() {
         let val = localStorage.getItem('valor_linea_costo') || '';
         document.getElementById('valor_linea_config').value = val;
+    }
+
+    function guardarValorObjeto() {
+        let val = document.getElementById('valor_objeto_config').value;
+        localStorage.setItem('valor_objeto_costo', val);
+    }
+
+    function cargarValorObjeto() {
+        let val = localStorage.getItem('valor_objeto_costo') || '';
+        document.getElementById('valor_objeto_config').value = val;
     }
 
     function obtenerJugadorasFijas() {
@@ -515,10 +642,140 @@
         }
     }
 
+    function renderizarObjetos() {
+        let contenedorObjetos = document.getElementById('lista-objetos');
+        contenedorObjetos.innerHTML = '';
+        let listaFijas = obtenerJugadorasFijas();
+
+        for (let i = 1; i <= totalObjetos; i++) {
+            let guardado = localStorage.getItem('objeto_ronda_' + i) || '';
+            let estadoPago = localStorage.getItem('estado_pago_objeto_' + i) || 'pendiente';
+            let nombreObjeto = listaObjetosNombres[i - 1];
+
+            let row = document.createElement('div');
+            row.className = 'line-row';
+
+            let num = document.createElement('div');
+            num.className = 'line-number';
+            num.style.width = '140px';
+            num.style.fontSize = '13px';
+            num.textContent = nombreObjeto;
+
+            let select = document.createElement('select');
+            select.className = 'line-select';
+            select.id = 'select_objeto_' + i;
+
+            let optDefault = document.createElement('option');
+            optDefault.value = "";
+            optDefault.textContent = "-- Disponible --";
+            select.appendChild(optDefault);
+
+            listaFijas.forEach(nombre => {
+                let opt = document.createElement('option');
+                opt.value = nombre;
+                opt.textContent = nombre;
+                if (nombre === guardado) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            select.addEventListener('change', function() {
+                let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
+                let anteriorJugadora = localStorage.getItem('objeto_ronda_' + i) || '';
+                let nuevaJugadora = select.value;
+                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+
+                if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora) {
+                    if (valorObjeto > 0) {
+                        if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
+                        saldos[anteriorJugadora] += valorObjeto; 
+                    }
+                }
+
+                if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
+                    if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
+
+                    if (saldos[nuevaJugadora] >= valorObjeto && valorObjeto > 0) {
+                        saldos[nuevaJugadora] -= valorObjeto; 
+                        localStorage.setItem('estado_pago_objeto_' + i, 'pagado');
+                    } else {
+                        if (valorObjeto > 0) {
+                            saldos[nuevaJugadora] -= valorObjeto;
+                        }
+                        localStorage.setItem('estado_pago_objeto_' + i, 'pendiente');
+                    }
+                }
+
+                localStorage.setItem('objeto_ronda_' + i, nuevaJugadora);
+                if (nuevaJugadora === "") {
+                    localStorage.removeItem('estado_pago_objeto_' + i);
+                }
+
+                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+                renderizarObjetos();
+                actualizarSelectsPremiosObjetos();
+                mostrarSaldos();
+            });
+
+            let btnPago = document.createElement('button');
+            btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
+            btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
+            btnPago.title = estadoPago === 'pagado' ? 'Pagado' : 'Pendiente';
+            
+            btnPago.addEventListener('click', function() {
+                let nombreJugadora = select.value;
+                if (nombreJugadora === "") {
+                    alert("Selecciona una jugadora en este objeto primero.");
+                    return;
+                }
+
+                let estadoActual = localStorage.getItem('estado_pago_objeto_' + i) || 'pendiente';
+                let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
+                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+
+                if (estadoActual === 'pendiente') {
+                    localStorage.setItem('estado_pago_objeto_' + i, 'pagado');
+                    if (valorObjeto > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] += valorObjeto; 
+                    }
+                } else {
+                    localStorage.setItem('estado_pago_objeto_' + i, 'pendiente');
+                    if (valorObjeto > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] -= valorObjeto;
+                    }
+                }
+
+                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+                renderizarObjetos();
+                mostrarSaldos();
+            });
+
+            row.appendChild(num);
+            row.appendChild(select);
+            if(guardado !== "") {
+                row.appendChild(btnPago);
+            }
+            contenedorObjetos.appendChild(row);
+        }
+    }
+
     function obtenerJugadorasParticipantesRonda() {
         let participantes = [];
         for (let i = 1; i <= totalLineas; i++) {
             let jugadora = localStorage.getItem('linea_ronda_' + i) || '';
+            if (jugadora !== "" && !participantes.includes(jugadora)) {
+                participantes.push(jugadora);
+            }
+        }
+        participantes.sort();
+        return participantes;
+    }
+
+    function obtenerJugadorasParticipantesObjetos() {
+        let participantes = [];
+        for (let i = 1; i <= totalObjetos; i++) {
+            let jugadora = localStorage.getItem('objeto_ronda_' + i) || '';
             if (jugadora !== "" && !participantes.includes(jugadora)) {
                 participantes.push(jugadora);
             }
@@ -555,17 +812,53 @@
         }
     }
 
+    function actualizarSelectsPremiosObjetos() {
+        let participantes = obtenerJugadorasParticipantesObjetos();
+        
+        for (let p = 1; p <= 4; p++) {
+            let sel = document.getElementById('ganadora_obj_' + p);
+            let actual = sel.value;
+            
+            sel.innerHTML = '<option value="">-- Seleccionar --</option>';
+            
+            participantes.forEach(nombre => {
+                let opt = document.createElement('option');
+                opt.value = nombre;
+                opt.textContent = nombre;
+                if (nombre === actual) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            
+            if (actual !== "" && !participantes.includes(actual)) {
+                sel.value = "";
+            }
+            
+            let montoGuardado = localStorage.getItem('premio_monto_obj_def_' + p);
+            if (montoGuardado && !document.getElementById('monto_obj_' + p).value) {
+                document.getElementById('monto_obj_' + p).value = montoGuardado;
+            }
+        }
+    }
+
     function guardarPremioTemporal(p) {
         let monto = document.getElementById('monto_' + p).value;
         localStorage.setItem('premio_monto_def_' + p, monto);
     }
 
+    function guardarPremioObjTemporal(p) {
+        let monto = document.getElementById('monto_obj_' + p).value;
+        localStorage.setItem('premio_monto_obj_def_' + p, monto);
+    }
+
     function actualizarTodo() {
         actualizarIndicadorRonda();
         cargarValorLinea();
+        cargarValorObjeto();
         renderizarJugadorasFijas();
         renderizarLineas();
+        renderizarObjetos();
         actualizarSelectsPremios();
+        actualizarSelectsPremiosObjetos();
         mostrarSaldos();
         mostrarHistorialRondas();
     }
@@ -594,7 +887,36 @@
         texto += `\nTotal asignadas: ${asignadas}/15`;
 
         navigator.clipboard.writeText(texto).then(() => {
-            alert("¡Lista ordenada copiada para WhatsApp!");
+            alert("¡Lista de líneas copiada para WhatsApp!");
+        });
+    }
+
+    function copiarWhatsAppObjetos() {
+        let rondaActual = obtenerRondaActual();
+        let valorObjeto = document.getElementById('valor_objeto_config').value;
+        let texto = `🎁 *LISTA DE OBJETOS - RONDA ${rondaActual}* 🎁\n`;
+        if(valorObjeto) texto += `_Costo de objeto: ${valorObjeto}_\n\n`;
+        else texto += `\n`;
+
+        let asignados = 0;
+
+        for (let i = 1; i <= totalObjetos; i++) {
+            let val = document.getElementById('select_objeto_' + i).value.trim();
+            let estado = localStorage.getItem('estado_pago_objeto_' + i) || 'pendiente';
+            let etiquetaPago = (estado === 'pagado') ? '*(Pagado)*' : '_(Pendiente)_';
+            let nombreObj = listaObjetosNombres[i - 1];
+
+            if (val !== "") {
+                texto += `${nombreObj} - *${val}* ${etiquetaPago}\n`;
+                asignados++;
+            } else {
+                texto += `${nombreObj} - _Disponible_\n`;
+            }
+        }
+        texto += `\nTotal asignados: ${asignados}/10`;
+
+        navigator.clipboard.writeText(texto).then(() => {
+            alert("¡Lista de objetos copiada para WhatsApp!");
         });
     }
 
@@ -618,12 +940,32 @@
         }
     }
 
+    function limpiarObjetosRonda() {
+        if (confirm("¿Vaciar los 10 objetos de esta ronda?")) {
+            for (let i = 1; i <= totalObjetos; i++) {
+                let jugadora = localStorage.getItem('objeto_ronda_' + i) || '';
+                let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
+
+                if (jugadora !== "" && valorObjeto > 0) {
+                    let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                    if (!saldos[jugadora]) saldos[jugadora] = 0;
+                    saldos[jugadora] += valorObjeto;
+                    localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+                }
+
+                localStorage.removeItem('objeto_ronda_' + i);
+                localStorage.removeItem('estado_pago_objeto_' + i);
+            }
+            actualizarTodo();
+        }
+    }
+
     function guardarRonda() {
         let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
         let historial = JSON.parse(localStorage.getItem('historial_rondas_lista') || '[]');
         let rondaActual = obtenerRondaActual();
         let registradas = 0;
-        let resumenRondaText = `Ronda ${rondaActual}: `;
+        let resumenRondaText = `Ronda ${rondaActual} (Líneas): `;
 
         for (let p = 1; p <= 4; p++) {
             let nombre = document.getElementById('ganadora_' + p).value.trim();
@@ -659,6 +1001,50 @@
             alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Líneas vaciadas.`);
         } else {
             alert("Por favor selecciona al menos una ganadora y su monto.");
+        }
+    }
+
+    function guardarRondaObjetos() {
+        let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+        let historial = JSON.parse(localStorage.getItem('historial_rondas_lista') || '[]');
+        let rondaActual = obtenerRondaActual();
+        let registradas = 0;
+        let resumenRondaText = `Ronda ${rondaActual} (Objetos): `;
+
+        for (let p = 1; p <= 4; p++) {
+            let nombre = document.getElementById('ganadora_obj_' + p).value.trim();
+            let monto = parseFloat(document.getElementById('monto_obj_' + p).value) || 0;
+
+            if (nombre !== "" && monto > 0) {
+                if (!saldos[nombre]) saldos[nombre] = 0;
+                saldos[nombre] += monto; 
+                registradas++;
+                resumenRondaText += `[${p}º: ${nombre} (+${monto})] `;
+            }
+        }
+
+        if (registradas > 0) {
+            localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+            
+            historial.push(resumenRondaText);
+            localStorage.setItem('historial_rondas_lista', JSON.stringify(historial));
+            
+            for (let p = 1; p <= 4; p++) {
+                document.getElementById('ganadora_obj_' + p).value = '';
+            }
+
+            for (let i = 1; i <= totalObjetos; i++) {
+                localStorage.removeItem('objeto_ronda_' + i);
+                localStorage.removeItem('estado_pago_objeto_' + i);
+            }
+
+            let nuevaRonda = rondaActual + 1;
+            localStorage.setItem('numero_ronda', nuevaRonda);
+
+            actualizarTodo();
+            alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Objetos vaciados.`);
+        } else {
+            alert("Por favor selecciona al menos un ganador y su monto en objetos.");
         }
     }
 
@@ -747,7 +1133,7 @@
     }
 
     function reiniciarDia() {
-        let confirmacion1 = confirm("⚠️ ¿Reiniciar el día? Se borrarán todos los saldos, líneas, historial y la ronda volverá a 1.");
+        let confirmacion1 = confirm("⚠️ ¿Reiniciar el día? Se borrarán todos los saldos, líneas, objetos, historial y la ronda volverá a 1.");
         if (confirmacion1) {
             let confirmacion2 = prompt("Escribe la palabra 'BORRAR' para confirmar:");
             if (confirmacion2 && confirmacion2.toUpperCase() === "BORRAR") {
@@ -755,19 +1141,28 @@
                     localStorage.removeItem('linea_ronda_' + i);
                     localStorage.removeItem('estado_pago_linea_' + i);
                 }
+                for (let i = 1; i <= totalObjetos; i++) {
+                    localStorage.removeItem('objeto_ronda_' + i);
+                    localStorage.removeItem('estado_pago_objeto_' + i);
+                }
                 localStorage.removeItem('saldos_jugadoras');
                 localStorage.removeItem('historial_rondas_lista');
                 localStorage.setItem('numero_ronda', '1');
                 for(let p=1; p<=4; p++) {
                     localStorage.removeItem('premio_monto_def_' + p);
+                    localStorage.removeItem('premio_monto_obj_def_' + p);
                 }
                 localStorage.removeItem('valor_linea_costo');
+                localStorage.removeItem('valor_objeto_costo');
                 actualizarTodo();
                 alert("¡Día reiniciado con éxito!");
             }
         }
     }
 
+    // Inicializar modo guardado
+    let modoGuardado = localStorage.getItem('modo_activo_yune') || 'lineas';
+    cambiarModo(modoGuardado);
     actualizarTodo();
 </script>
 
