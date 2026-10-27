@@ -43,6 +43,15 @@
             margin-top: 0;
             margin-bottom: 10px;
         }
+        .sync-box {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            background: #e8f8f0;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #b8e6c8;
+        }
         .mode-selector {
             display: flex;
             gap: 6px;
@@ -283,6 +292,16 @@
     <h2>Control de Juego - Yune</h2>
     <p class="subtitle">Organizado y sin enredos</p>
 
+    <!-- BOTONES DE SINCRONIZACIÓN RÁPIDA ENTRE TELÉFONOS -->
+    <div class="sync-box">
+        <button onclick="enviarDatosAlOtroTelefono()" style="background: #25D366; color: white; flex: 1; font-size: 12px; padding: 8px;">
+            📤 Enviar a otro teléfono
+        </button>
+        <button onclick="pegarDatosDelOtroTelefono()" style="background: #3742fa; color: white; flex: 1; font-size: 12px; padding: 8px;">
+            📥 Cargar datos recibidos
+        </button>
+    </div>
+
     <!-- SELECTOR DE MODO -->
     <div class="mode-selector">
         <button id="btn-modo-lineas" class="btn-mode active-lineas" onclick="cambiarModo('lineas')">📌 Control de Líneas (15)</button>
@@ -425,6 +444,37 @@
         "9 🏠 La Casa",
         "10 ☀️ El Sol"
     ];
+
+    // FUNCIONES DE SINCRONIZACIÓN ENTRE TELÉFONOS
+    function enviarDatosAlOtroTelefono() {
+        let datosCompletos = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            let clave = localStorage.key(i);
+            datosCompletos[clave] = localStorage.getItem(clave);
+        }
+        let textoComprimido = encodeURIComponent(JSON.stringify(datosCompletos));
+        let urlWhatsApp = `https://wa.me/?text=SYNC_BINGO:${textoComprimido}`;
+        window.open(urlWhatsApp, '_blank');
+    }
+
+    function pegarDatosDelOtroTelefono() {
+        let codigoRecibido = prompt("Pega aquí el texto largo o enlace que te llegó por WhatsApp:");
+        if (codigoRecibido) {
+            try {
+                let limpio = codigoRecibido.replace('SYNC_BINGO:', '').trim();
+                let datosDesempaquetados = JSON.parse(decodeURIComponent(limpio));
+                
+                for (let clave in datosDesempaquetados) {
+                    localStorage.setItem(clave, datosDesempaquetados[clave]);
+                }
+
+                alert("¡Datos sincronizados con éxito! La página se recargará.");
+                location.reload();
+            } catch (error) {
+                alert("El código no es válido o está incompleto. Inténtalo de nuevo.");
+            }
+        }
+    }
 
     function cambiarModo(modo) {
         let btnLineas = document.getElementById('btn-modo-lineas');
