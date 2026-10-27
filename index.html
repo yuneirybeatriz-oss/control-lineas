@@ -292,13 +292,13 @@
     <h2>Control de Juego - Yune</h2>
     <p class="subtitle">Organizado y sin enredos</p>
 
-    <!-- BOTONES DE SINCRONIZACIÓN RÁPIDA ENTRE TELÉFONOS -->
+    <!-- BOTONES DE SINCRONIZACIÓN INTELIGENTE (SOLO JUGADORAS Y SALDOS) -->
     <div class="sync-box">
         <button onclick="enviarDatosAlOtroTelefono()" style="background: #25D366; color: white; flex: 1; font-size: 12px; padding: 8px;">
-            📤 Enviar a otro teléfono
+            📤 Enviar Jugadoras/Saldos
         </button>
         <button onclick="pegarDatosDelOtroTelefono()" style="background: #3742fa; color: white; flex: 1; font-size: 12px; padding: 8px;">
-            📥 Cargar datos recibidos
+            📥 Cargar al Teléfono Actual
         </button>
     </div>
 
@@ -445,30 +445,32 @@
         "10 ☀️ El Sol"
     ];
 
-    // FUNCIONES DE SINCRONIZACIÓN ENTRE TELÉFONOS
+    // FUNCIONES DE SINCRONIZACIÓN INTELIGENTE (SOLO JUGADORAS Y SALDOS)
     function enviarDatosAlOtroTelefono() {
-        let datosCompletos = {};
-        for (let i = 0; i < localStorage.length; i++) {
-            let clave = localStorage.key(i);
-            datosCompletos[clave] = localStorage.getItem(clave);
-        }
-        let textoComprimido = encodeURIComponent(JSON.stringify(datosCompletos));
-        let urlWhatsApp = `https://wa.me/?text=SYNC_BINGO:${textoComprimido}`;
+        let datosSincronizables = {
+            'jugadoras_fijas': localStorage.getItem('jugadoras_fijas'),
+            'saldos_jugadoras': localStorage.getItem('saldos_jugadoras')
+        };
+        let textoComprimido = encodeURIComponent(JSON.stringify(datosSincronizables));
+        let urlWhatsApp = `https://wa.me/?text=SYNC_BINGO_JUGADORAS:${textoComprimido}`;
         window.open(urlWhatsApp, '_blank');
     }
 
     function pegarDatosDelOtroTelefono() {
-        let codigoRecibido = prompt("Pega aquí el texto largo o enlace que te llegó por WhatsApp:");
+        let codigoRecibido = prompt("Pega aquí el texto largo que te llegó por WhatsApp:");
         if (codigoRecibido) {
             try {
-                let limpio = codigoRecibido.replace('SYNC_BINGO:', '').trim();
+                let limpio = codigoRecibido.replace('SYNC_BINGO_JUGADORAS:', '').trim();
                 let datosDesempaquetados = JSON.parse(decodeURIComponent(limpio));
                 
-                for (let clave in datosDesempaquetados) {
-                    localStorage.setItem(clave, datosDesempaquetados[clave]);
+                if (datosDesempaquetados.jugadoras_fijas) {
+                    localStorage.setItem('jugadoras_fijas', datosDesempaquetados.jugadoras_fijas);
+                }
+                if (datosDesempaquetados.saldos_jugadoras) {
+                    localStorage.setItem('saldos_jugadoras', datosDesempaquetados.saldos_jugadoras);
                 }
 
-                alert("¡Datos sincronizados con éxito! La página se recargará.");
+                alert("¡Jugadoras y saldos sincronizados con éxito! La página se recargará.");
                 location.reload();
             } catch (error) {
                 alert("El código no es válido o está incompleto. Inténtalo de nuevo.");
