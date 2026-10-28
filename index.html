@@ -305,7 +305,7 @@
     <!-- SELECTOR DE MODO -->
     <div class="mode-selector">
         <button id="btn-modo-lineas" class="btn-mode active-lineas" onclick="cambiarModo('lineas')">📌 Control de Líneas (15)</button>
-        <button id="btn-modo-objetos" class="btn-mode" onclick="cambiarModo('objetos')">🎁 Control de Objetos (10)</button>
+        <button id="btn-modo-objetos" class="btn-mode" onclick="cambiarModo('objetos')">🎁 Control de Objetos (20)</button>
     </div>
 
     <!-- INDICADOR DE RONDA -->
@@ -381,31 +381,26 @@
             <button class="btn-clear" onclick="limpiarObjetosRonda()">🧹 Vaciar Objetos</button>
         </div>
 
-        <div class="section-title">Asignación de los 10 Objetos</div>
+        <div class="section-title">Asignación de los 20 Objetos</div>
         <div id="lista-objetos"></div>
 
-        <!-- PREMIOS OBJETOS -->
+        <!-- PREMIOS OBJETOS (ACTUALIZADO A 3 PREMIOS PRINCIPALES: 10K, 5K, 3K) -->
         <div class="section-title">Registro de Premios (Objetos)</div>
         <div class="premios-grid">
             <div class="premio-box">
-                <label>1er Lugar (Principal)</label>
+                <label>1er Premio (¡10.000!)</label>
                 <select id="ganadora_obj_1" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
-                <input type="number" id="monto_obj_1" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioObjTemporal(1)">
+                <input type="number" id="monto_obj_1" placeholder="10000" style="margin-top:5px;" oninput="guardarPremioObjTemporal(1)">
             </div>
             <div class="premio-box">
-                <label>2do Lugar</label>
+                <label>2do Premio (¡5.000!)</label>
                 <select id="ganadora_obj_2" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
-                <input type="number" id="monto_obj_2" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioObjTemporal(2)">
+                <input type="number" id="monto_obj_2" placeholder="5000" style="margin-top:5px;" oninput="guardarPremioObjTemporal(2)">
             </div>
             <div class="premio-box">
-                <label>3er Lugar</label>
+                <label>3er Premio (¡3.000!)</label>
                 <select id="ganadora_obj_3" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
-                <input type="number" id="monto_obj_3" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioObjTemporal(3)">
-            </div>
-            <div class="premio-box">
-                <label>4to Lugar</label>
-                <select id="ganadora_obj_4" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
-                <input type="number" id="monto_obj_4" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioObjTemporal(4)">
+                <input type="number" id="monto_obj_3" placeholder="3000" style="margin-top:5px;" oninput="guardarPremioObjTemporal(3)">
             </div>
         </div>
         <button class="btn-whatsapp" style="background-color: var(--accent); width:100%; margin-bottom: 10px;" onclick="guardarRondaObjetos()">💾 Guardar Ronda Objetos y Avanzar</button>
@@ -431,7 +426,9 @@
 
 <script>
     const totalLineas = 15;
-    const totalObjetos = 10;
+    const totalObjetos = 20;
+    
+    // Lista oficial de los 20 objetos sincronizada con la ruleta
     const listaObjetosNombres = [
         "1 🪜 La Escalera",
         "2 💍 El Anillo",
@@ -442,7 +439,17 @@
         "7 🎩 El Sombrero",
         "8 🍼 La Botella",
         "9 🏠 La Casa",
-        "10 ☀️ El Sol"
+        "10 ☀️ El Sol",
+        "11 💎 El Diamante",
+        "12 🧸 El Osito",
+        "13 🌸 La Flor",
+        "14 ☕ El Café",
+        "15 🍦 El Helado",
+        "16 ⚓ El Ancla",
+        "17 🎁 El Regalo",
+        "18 🎸 La Guitarra",
+        "19 🍉 La Sandía",
+        "20 🚀 El Cohete"
     ];
 
     // FUNCIONES DE SINCRONIZACIÓN INTELIGENTE (SOLO JUGADORAS Y SALDOS)
@@ -710,7 +717,7 @@
             let num = document.createElement('div');
             num.className = 'line-number';
             num.style.width = '140px';
-            num.style.fontSize = '13px';
+            num.style.fontSize = '12px';
             num.textContent = nombreObjeto;
 
             let select = document.createElement('select');
@@ -867,7 +874,7 @@
     function actualizarSelectsPremiosObjetos() {
         let participantes = obtenerJugadorasParticipantesObjetos();
         
-        for (let p = 1; p <= 4; p++) {
+        for (let p = 1; p <= 3; p++) {
             let sel = document.getElementById('ganadora_obj_' + p);
             let actual = sel.value;
             
@@ -965,7 +972,7 @@
                 texto += `${nombreObj} - _Disponible_\n`;
             }
         }
-        texto += `\nTotal asignados: ${asignados}/10`;
+        texto += `\nTotal asignados: ${asignados}/20`;
 
         navigator.clipboard.writeText(texto).then(() => {
             alert("¡Lista de objetos copiada para WhatsApp!");
@@ -993,7 +1000,7 @@
     }
 
     function limpiarObjetosRonda() {
-        if (confirm("¿Vaciar los 10 objetos de esta ronda?")) {
+        if (confirm("¿Vaciar los 20 objetos de esta ronda?")) {
             for (let i = 1; i <= totalObjetos; i++) {
                 let jugadora = localStorage.getItem('objeto_ronda_' + i) || '';
                 let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
@@ -1063,7 +1070,7 @@
         let registradas = 0;
         let resumenRondaText = `Ronda ${rondaActual} (Objetos): `;
 
-        for (let p = 1; p <= 4; p++) {
+        for (let p = 1; p <= 3; p++) {
             let nombre = document.getElementById('ganadora_obj_' + p).value.trim();
             let monto = parseFloat(document.getElementById('monto_obj_' + p).value) || 0;
 
@@ -1081,7 +1088,7 @@
             historial.push(resumenRondaText);
             localStorage.setItem('historial_rondas_lista', JSON.stringify(historial));
             
-            for (let p = 1; p <= 4; p++) {
+            for (let p = 1; p <= 3; p++) {
                 document.getElementById('ganadora_obj_' + p).value = '';
             }
 
