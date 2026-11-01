@@ -476,7 +476,6 @@
     const totalObjetos = 20;
     const totalColores = 10;
     
-    // Lista oficial de los 20 objetos sincronizada con la ruleta
     const listaObjetosNombres = [
         "1 🪜 La Escalera", "2 💍 El Anillo", "3 🔑 La Llave", "4 ⭐ La Estrella",
         "5 👑 La Corona", "6 🚗 El Carro", "7 🎩 El Sombrero", "8 🍼 La Botella",
@@ -485,13 +484,11 @@
         "17 🎁 El Regalo", "18 🎸 La Guitarra", "19 🍉 La Sandía", "20 🚀 El Cohete"
     ];
 
-    // Lista oficial de los 10 colores sincronizada con la ruleta de colores
     const listaColoresNombres = [
         "🔴 Rojo", "🔵 Azul", "🟢 Verde", "🟡 Amarillo", "🟠 Naranja",
         "🟣 Morado", "🩷 Rosado", "🩵 Celeste", "🟤 Marrón", "⚪ Blanco"
     ];
 
-    // FUNCIONES DE SINCRONIZACIÓN INTELIGENTE (SOLO JUGADORAS Y SALDOS)
     function enviarDatosAlOtroTelefono() {
         let datosSincronizables = {
             'jugadoras_fijas': localStorage.getItem('jugadoras_fijas'),
@@ -509,17 +506,13 @@
                 let limpio = codigoRecibido.replace('SYNC_BINGO_JUGADORAS:', '').trim();
                 let datosDesempaquetados = JSON.parse(decodeURIComponent(limpio));
                 
-                if (datosDesempaquetados.jugadoras_fijas) {
-                    localStorage.setItem('jugadoras_fijas', datosDesempaquetados.jugadoras_fijas);
-                }
-                if (datosDesempaquetados.saldos_jugadoras) {
-                    localStorage.setItem('saldos_jugadoras', datosDesempaquetados.saldos_jugadoras);
-                }
+                if (datosDesempaquetados.jugadoras_fijas) localStorage.setItem('jugadoras_fijas', datosDesempaquetados.jugadoras_fijas);
+                if (datosDesempaquetados.saldos_jugadoras) localStorage.setItem('saldos_jugadoras', datosDesempaquetados.saldos_jugadoras);
 
                 alert("¡Jugadoras y saldos sincronizados con éxito! La página se recargará.");
                 location.reload();
             } catch (error) {
-                alert("El código no es válido o está incompleto. Inténtalo de nuevo.");
+                alert("El código no es válido o está incompleto.");
             }
         }
     }
@@ -558,48 +551,23 @@
         }
     }
 
-    function obtenerRondaActual() {
-        return parseInt(localStorage.getItem('numero_ronda') || '1');
-    }
+    function obtenerRondaActual() { return parseInt(localStorage.getItem('numero_ronda') || '1'); }
+    function actualizarIndicadorRonda() { document.getElementById('display-ronda').textContent = `RONDA ${obtenerRondaActual()}`; }
 
-    function actualizarIndicadorRonda() {
-        document.getElementById('display-ronda').textContent = `RONDA ${obtenerRondaActual()}`;
-    }
+    function guardarValorLinea() { localStorage.setItem('valor_linea_costo', document.getElementById('valor_linea_config').value); }
+    function cargarValorLinea() { document.getElementById('valor_linea_config').value = localStorage.getItem('valor_linea_costo') || ''; }
+    function guardarValorObjeto() { localStorage.setItem('valor_objeto_costo', document.getElementById('valor_objeto_config').value); }
+    function cargarValorObjeto() { document.getElementById('valor_objeto_config').value = localStorage.getItem('valor_objeto_costo') || ''; }
+    function guardarValorColor() { localStorage.setItem('valor_color_costo', document.getElementById('valor_color_config').value); }
+    function cargarValorColor() { document.getElementById('valor_color_config').value = localStorage.getItem('valor_color_costo') || ''; }
 
-    function guardarValorLinea() {
-        localStorage.setItem('valor_linea_costo', document.getElementById('valor_linea_config').value);
-    }
-    function cargarValorLinea() {
-        document.getElementById('valor_linea_config').value = localStorage.getItem('valor_linea_costo') || '';
-    }
-
-    function guardarValorObjeto() {
-        localStorage.setItem('valor_objeto_costo', document.getElementById('valor_objeto_config').value);
-    }
-    function cargarValorObjeto() {
-        document.getElementById('valor_objeto_config').value = localStorage.getItem('valor_objeto_costo') || '';
-    }
-
-    function guardarValorColor() {
-        localStorage.setItem('valor_color_costo', document.getElementById('valor_color_config').value);
-    }
-    function cargarValorColor() {
-        document.getElementById('valor_color_config').value = localStorage.getItem('valor_color_costo') || '';
-    }
-
-    function obtenerJugadorasFijas() {
-        return JSON.parse(localStorage.getItem('jugadoras_fijas') || '[]');
-    }
-
-    function guardarJugadorasFijas(lista) {
-        localStorage.setItem('jugadoras_fijas', JSON.stringify(lista));
-    }
+    function obtenerJugadorasFijas() { return JSON.parse(localStorage.getItem('jugadoras_fijas') || '[]'); }
+    function guardarJugadorasFijas(lista) { localStorage.setItem('jugadoras_fijas', JSON.stringify(lista)); }
 
     function agregarJugadoraFija() {
         let input = document.getElementById('nueva_jugadora_nombre');
         let nombre = input.value.trim();
         if (nombre === "") return;
-
         let lista = obtenerJugadorasFijas();
         if (!lista.includes(nombre)) {
             lista.push(nombre);
@@ -624,12 +592,7 @@
     function renderizarJugadorasFijas() {
         let contenedorFijas = document.getElementById('lista-jugadoras-fijas');
         let lista = obtenerJugadorasFijas();
-
-        if (lista.length === 0) {
-            contenedorFijas.innerHTML = "<em>No hay jugadoras fijas registradas. Añade una arriba.</em>";
-            return;
-        }
-
+        if (lista.length === 0) { contenedorFijas.innerHTML = "<em>No hay jugadoras fijas registradas.</em>"; return; }
         let html = "";
         lista.forEach(nombre => {
             html += `<span class="jugadora-tag">${nombre} <button class="btn-delete" onclick="eliminarJugadoraFija('${nombre}')">X</button></span>`;
@@ -655,7 +618,8 @@
 
             let select = document.createElement('select');
             select.className = 'line-select';
-            
+            select.id = 'select_linea_' + i;
+
             let optDefault = document.createElement('option');
             optDefault.value = "";
             optDefault.textContent = "-- Disponible --";
@@ -675,11 +639,9 @@
                 let nuevaJugadora = select.value;
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
-                if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora) {
-                    if (valorLinea > 0) {
-                        if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
-                        saldos[anteriorJugadora] += valorLinea; 
-                    }
+                if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora && valorLinea > 0) {
+                    if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
+                    saldos[anteriorJugadora] += valorLinea; 
                 }
 
                 if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
@@ -761,6 +723,7 @@
 
             let select = document.createElement('select');
             select.className = 'line-select';
+            select.id = 'select_objeto_' + i;
 
             let optDefault = document.createElement('option');
             optDefault.value = "";
@@ -865,6 +828,7 @@
 
             let select = document.createElement('select');
             select.className = 'line-select';
+            select.id = 'select_color_' + i; // <--- ¡AQUÍ ESTABA EL DETALLE QUE FALTABA!
 
             let optDefault = document.createElement('option');
             optDefault.value = "";
@@ -992,9 +956,7 @@
                 sel.appendChild(opt);
             });
             let montoGuardado = localStorage.getItem('premio_monto_def_' + p);
-            if (montoGuardado && !document.getElementById('monto_' + p).value) {
-                document.getElementById('monto_' + p).value = montoGuardado;
-            }
+            if (montoGuardado && !document.getElementById('monto_' + p).value) document.getElementById('monto_' + p).value = montoGuardado;
         }
     }
 
@@ -1012,9 +974,7 @@
                 sel.appendChild(opt);
             });
             let montoGuardado = localStorage.getItem('premio_monto_obj_def_' + p);
-            if (montoGuardado && !document.getElementById('monto_obj_' + p).value) {
-                document.getElementById('monto_obj_' + p).value = montoGuardado;
-            }
+            if (montoGuardado && !document.getElementById('monto_obj_' + p).value) document.getElementById('monto_obj_' + p).value = montoGuardado;
         }
     }
 
@@ -1032,9 +992,7 @@
                 sel.appendChild(opt);
             });
             let montoGuardado = localStorage.getItem('premio_monto_col_def_' + p);
-            if (montoGuardado && !document.getElementById('monto_col_' + p).value) {
-                document.getElementById('monto_col_' + p).value = montoGuardado;
-            }
+            if (montoGuardado && !document.getElementById('monto_col_' + p).value) document.getElementById('monto_col_' + p).value = montoGuardado;
         }
     }
 
@@ -1396,7 +1354,6 @@
         }
     }
 
-    // Inicializar modo guardado
     let modoGuardado = localStorage.getItem('modo_activo_yune') || 'lineas';
     cambiarModo(modoGuardado);
     actualizarTodo();
