@@ -316,30 +316,28 @@
         <button id="btn-modo-colores" class="btn-mode" onclick="cambiarModo('colores')">🎨 Colores (10)</button>
     </div>
 
+    <!-- JUGADORAS FIJAS SIEMPRE ARRIBA -->
+    <div class="section-title" style="margin-top: 5px;">Mis Jugadoras Habituales</div>
+    <div class="registry-box">
+        <div class="registry-input-row">
+            <input type="text" id="nueva_jugadora_nombre" placeholder="Nombre de la jugadora...">
+            <button class="btn-add" onclick="agregarJugadoraFija()">+ Agregar</button>
+        </div>
+        <div id="lista-jugadoras-fijas">
+            <em>No hay jugadoras fijas registradas.</em>
+        </div>
+    </div>
+
     <!-- INDICADOR DE RONDA -->
     <div class="ronda-indicator" id="display-ronda">RONDA 1</div>
 
     <!-- ================= CONTENEDOR MODO LÍNEAS ================= -->
     <div id="seccion-lineas">
-        <!-- CONFIGURACIÓN VALOR DE LÍNEA -->
         <div class="config-box">
             <label>Costo de cada Línea:</label>
             <input type="number" id="valor_linea_config" placeholder="Ej: 5" oninput="guardarValorLinea()">
         </div>
 
-        <!-- JUGADORAS FIJAS -->
-        <div class="section-title">Mis Jugadoras Habituales</div>
-        <div class="registry-box">
-            <div class="registry-input-row">
-                <input type="text" id="nueva_jugadora_nombre" placeholder="Nombre de la jugadora...">
-                <button class="btn-add" onclick="agregarJugadoraFija()">+ Agregar</button>
-            </div>
-            <div id="lista-jugadoras-fijas">
-                <em>No hay jugadoras fijas registradas.</em>
-            </div>
-        </div>
-
-        <!-- ACCIONES DE LÍNEAS -->
         <div class="actions-top" style="margin-top: 15px;">
             <button class="btn-whatsapp" onclick="copiarWhatsApp()">📋 Copiar para WhatsApp</button>
             <button class="btn-clear" onclick="limpiarLineasRonda()">🧹 Vaciar Líneas</button>
@@ -348,7 +346,6 @@
         <div class="section-title">Asignación de las 15 Líneas (En Orden)</div>
         <div id="lista-lineas"></div>
 
-        <!-- PREMIOS LÍNEAS -->
         <div class="section-title">Registro de Premios de la Ronda</div>
         <div class="premios-grid">
             <div class="premio-box">
@@ -377,13 +374,11 @@
 
     <!-- ================= CONTENEDOR MODO OBJETOS ================= -->
     <div id="seccion-objetos" style="display: none;">
-        <!-- CONFIGURACIÓN VALOR DE OBJETO -->
         <div class="config-box">
             <label>Costo de cada Objeto:</label>
             <input type="number" id="valor_objeto_config" placeholder="Ej: 1000" oninput="guardarValorObjeto()">
         </div>
 
-        <!-- ACCIONES DE OBJETOS -->
         <div class="actions-top" style="margin-top: 15px;">
             <button class="btn-whatsapp" style="background-color: var(--accent);" onclick="copiarWhatsAppObjetos()">📋 Copiar Objetos WhatsApp</button>
             <button class="btn-clear" onclick="limpiarObjetosRonda()">🧹 Vaciar Objetos</button>
@@ -392,7 +387,6 @@
         <div class="section-title">Asignación de los 20 Objetos</div>
         <div id="lista-objetos"></div>
 
-        <!-- PREMIOS OBJETOS -->
         <div class="section-title">Registro de Premios (Objetos)</div>
         <div class="premios-grid">
             <div class="premio-box">
@@ -416,13 +410,11 @@
 
     <!-- ================= CONTENEDOR MODO COLORES ================= -->
     <div id="seccion-colores" style="display: none;">
-        <!-- CONFIGURACIÓN VALOR DE COLOR -->
         <div class="config-box">
             <label>Costo de cada Color:</label>
             <input type="number" id="valor_color_config" placeholder="Ej: 500" oninput="guardarValorColor()">
         </div>
 
-        <!-- ACCIONES DE COLORES -->
         <div class="actions-top" style="margin-top: 15px;">
             <button class="btn-whatsapp" style="background-color: var(--color-mode);" onclick="copiarWhatsAppColores()">📋 Copiar Colores WhatsApp</button>
             <button class="btn-clear" onclick="limpiarColoresRonda()">🧹 Vaciar Colores</button>
@@ -431,7 +423,6 @@
         <div class="section-title">Asignación de los 10 Colores</div>
         <div id="lista-colores"></div>
 
-        <!-- PREMIOS COLORES -->
         <div class="section-title">Registro de Premios (Colores)</div>
         <div class="premios-grid">
             <div class="premio-box">
@@ -639,20 +630,17 @@
                 let nuevaJugadora = select.value;
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
-                if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora && valorLinea > 0) {
+                // Si tenía a alguien antes, se le devuelve el dinero al saldo porque se deseleccionó o cambió
+                if (anteriorJugadora !== "" && valorLinea > 0) {
                     if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
                     saldos[anteriorJugadora] += valorLinea; 
                 }
 
-                if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
+                // Si seleccionó a alguien nuevo, se le descuenta
+                if (nuevaJugadora !== "" && valorLinea > 0) {
                     if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
-                    if (saldos[nuevaJugadora] >= valorLinea && valorLinea > 0) {
-                        saldos[nuevaJugadora] -= valorLinea; 
-                        localStorage.setItem('estado_pago_linea_' + i, 'pagado');
-                    } else {
-                        if (valorLinea > 0) saldos[nuevaJugadora] -= valorLinea;
-                        localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
-                    }
+                    saldos[nuevaJugadora] -= valorLinea;
+                    localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
                 }
 
                 localStorage.setItem('linea_ronda_' + i, nuevaJugadora);
@@ -744,20 +732,15 @@
                 let nuevaJugadora = select.value;
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
-                if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora && valorObjeto > 0) {
+                if (anteriorJugadora !== "" && valorObjeto > 0) {
                     if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
                     saldos[anteriorJugadora] += valorObjeto; 
                 }
 
-                if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
+                if (nuevaJugadora !== "" && valorObjeto > 0) {
                     if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
-                    if (saldos[nuevaJugadora] >= valorObjeto && valorObjeto > 0) {
-                        saldos[nuevaJugadora] -= valorObjeto; 
-                        localStorage.setItem('estado_pago_objeto_' + i, 'pagado');
-                    } else {
-                        if (valorObjeto > 0) saldos[nuevaJugadora] -= valorObjeto;
-                        localStorage.setItem('estado_pago_objeto_' + i, 'pendiente');
-                    }
+                    saldos[nuevaJugadora] -= valorObjeto;
+                    localStorage.setItem('estado_pago_objeto_' + i, 'pendiente');
                 }
 
                 localStorage.setItem('objeto_ronda_' + i, nuevaJugadora);
@@ -828,7 +811,7 @@
 
             let select = document.createElement('select');
             select.className = 'line-select';
-            select.id = 'select_color_' + i; // <--- ¡AQUÍ ESTABA EL DETALLE QUE FALTABA!
+            select.id = 'select_color_' + i;
 
             let optDefault = document.createElement('option');
             optDefault.value = "";
@@ -849,20 +832,15 @@
                 let nuevaJugadora = select.value;
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
-                if (anteriorJugadora !== "" && anteriorJugadora !== nuevaJugadora && valorColor > 0) {
+                if (anteriorJugadora !== "" && valorColor > 0) {
                     if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
                     saldos[anteriorJugadora] += valorColor; 
                 }
 
-                if (nuevaJugadora !== "" && nuevaJugadora !== anteriorJugadora) {
+                if (nuevaJugadora !== "" && valorColor > 0) {
                     if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
-                    if (saldos[nuevaJugadora] >= valorColor && valorColor > 0) {
-                        saldos[nuevaJugadora] -= valorColor; 
-                        localStorage.setItem('estado_pago_color_' + i, 'pagado');
-                    } else {
-                        if (valorColor > 0) saldos[nuevaJugadora] -= valorColor;
-                        localStorage.setItem('estado_pago_color_' + i, 'pendiente');
-                    }
+                    saldos[nuevaJugadora] -= valorColor;
+                    localStorage.setItem('estado_pago_color_' + i, 'pendiente');
                 }
 
                 localStorage.setItem('color_ronda_' + i, nuevaJugadora);
