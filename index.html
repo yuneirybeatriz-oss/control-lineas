@@ -299,7 +299,7 @@
     <h2>Control de Juego - Yune</h2>
     <p class="subtitle">Organizado y sin enredos</p>
 
-    <!-- BOTONES DE SINCRONIZACIÓN INTELIGENTE (SOLO JUGADORAS Y SALDOS) -->
+    <!-- BOTONES DE SINCRONIZACIÓN INTELIGENTE -->
     <div class="sync-box">
         <button onclick="enviarDatosAlOtroTelefono()" style="background: #25D366; color: white; flex: 1; font-size: 12px; padding: 8px;">
             📤 Enviar Jugadoras/Saldos
@@ -316,7 +316,7 @@
         <button id="btn-modo-colores" class="btn-mode" onclick="cambiarModo('colores')">🎨 Colores (10)</button>
     </div>
 
-    <!-- JUGADORAS FIJAS SIEMPRE ARRIBA -->
+    <!-- JUGADORAS FIJAS -->
     <div class="section-title" style="margin-top: 5px;">Mis Jugadoras Habituales</div>
     <div class="registry-box">
         <div class="registry-input-row">
@@ -390,17 +390,17 @@
         <div class="section-title">Registro de Premios (Objetos)</div>
         <div class="premios-grid">
             <div class="premio-box">
-                <label>1er Premio (¡10.000!)</label>
+                <label>1er Premio</label>
                 <select id="ganadora_obj_1" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
                 <input type="number" id="monto_obj_1" placeholder="10000" style="margin-top:5px;" oninput="guardarPremioObjTemporal(1)">
             </div>
             <div class="premio-box">
-                <label>2do Premio (¡5.000!)</label>
+                <label>2do Premio</label>
                 <select id="ganadora_obj_2" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
                 <input type="number" id="monto_obj_2" placeholder="5000" style="margin-top:5px;" oninput="guardarPremioObjTemporal(2)">
             </div>
             <div class="premio-box">
-                <label>3er Premio (¡3.000!)</label>
+                <label>3er Premio</label>
                 <select id="ganadora_obj_3" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
                 <input type="number" id="monto_obj_3" placeholder="3000" style="margin-top:5px;" oninput="guardarPremioObjTemporal(3)">
             </div>
@@ -450,7 +450,7 @@
         <em>Aún no hay saldos acumulados.</em>
     </div>
 
-    <!-- HISTORIAL DE RONDAS -->
+    <!-- HISTORIAL -->
     <div class="section-title">Historial de Rondas Guardadas</div>
     <div id="historial-rondas" class="historial-box">
         <em>Aún no hay rondas finalizadas.</em>
@@ -591,6 +591,7 @@
         contenedorFijas.innerHTML = html;
     }
 
+    // ================= FUNCIÓN LÍNEAS =================
     function renderizarLineas() {
         let contenedorLineas = document.getElementById('lista-lineas');
         contenedorLineas.innerHTML = '';
@@ -630,15 +631,18 @@
                 let nuevaJugadora = select.value;
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
+                // 1. Devolver saldo a la jugadora anterior si se quita o cambia
                 if (anteriorJugadora !== "" && valorLinea > 0) {
                     if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
                     saldos[anteriorJugadora] += valorLinea; 
                 }
 
+                // 2. Descontar saldo a la nueva jugadora
                 if (nuevaJugadora !== "" && valorLinea > 0) {
                     if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
                     saldos[nuevaJugadora] -= valorLinea;
                     
+                    // Si la jugadora tiene saldo positivo o queda al día (>=0), se marca automáticamente en verde (pagado)
                     if (saldos[nuevaJugadora] >= 0) {
                         localStorage.setItem('estado_pago_linea_' + i, 'pagado');
                     } else {
@@ -659,12 +663,12 @@
             btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
             
+            // Botón manual para cambiar entre pagado y pendiente sin alterar los números
             btnPago.addEventListener('click', function() {
                 let nombreJugadora = select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en esta línea primero."); return; }
 
                 let estadoActual = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
-
                 if (estadoActual === 'pendiente') {
                     localStorage.setItem('estado_pago_linea_' + i, 'pagado');
                 } else {
@@ -672,7 +676,6 @@
                 }
 
                 renderizarLineas();
-                mostrarSaldos();
             });
 
             row.appendChild(num);
@@ -682,6 +685,7 @@
         }
     }
 
+    // ================= FUNCIÓN OBJETOS =================
     function renderizarObjetos() {
         let contenedorObjetos = document.getElementById('lista-objetos');
         contenedorObjetos.innerHTML = '';
@@ -758,7 +762,6 @@
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este objeto primero."); return; }
 
                 let estadoActual = localStorage.getItem('estado_pago_objeto_' + i) || 'pendiente';
-
                 if (estadoActual === 'pendiente') {
                     localStorage.setItem('estado_pago_objeto_' + i, 'pagado');
                 } else {
@@ -766,7 +769,6 @@
                 }
 
                 renderizarObjetos();
-                mostrarSaldos();
             });
 
             row.appendChild(num);
@@ -776,6 +778,7 @@
         }
     }
 
+    // ================= FUNCIÓN COLORES =================
     function renderizarColores() {
         let contenedorColores = document.getElementById('lista-colores');
         contenedorColores.innerHTML = '';
@@ -852,7 +855,6 @@
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este color primero."); return; }
 
                 let estadoActual = localStorage.getItem('estado_pago_color_' + i) || 'pendiente';
-
                 if (estadoActual === 'pendiente') {
                     localStorage.setItem('estado_pago_color_' + i, 'pagado');
                 } else {
@@ -860,7 +862,6 @@
                 }
 
                 renderizarColores();
-                mostrarSaldos();
             });
 
             row.appendChild(num);
@@ -974,6 +975,7 @@
         mostrarHistorialRondas();
     }
 
+    // ================= COPIAR WHATSAPP (CON SÍMBOLOS ✔️ y ❌) =================
     function copiarWhatsApp() {
         let rondaActual = obtenerRondaActual();
         let valorLinea = document.getElementById('valor_linea_config').value;
@@ -985,7 +987,6 @@
         for (let i = 1; i <= totalLineas; i++) {
             let val = document.getElementById('select_linea_' + i).value.trim();
             let estado = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
-            // Símbolo limpio: Flecha verde (✔️) si pagó, Cruz roja (❌) si está pendiente
             let iconoEstado = (estado === 'pagado') ? '✔️' : '❌';
 
             if (val !== "") {
@@ -996,7 +997,7 @@
             }
         }
         texto += `\nTotal asignadas: ${asignadas}/15`;
-        navigator.clipboard.writeText(texto).then(() => { alert("¡Lista de líneas copiada para WhatsApp con símbolos de pago!"); });
+        navigator.clipboard.writeText(texto).then(() => { alert("¡Lista de líneas copiada para WhatsApp!"); });
     }
 
     function copiarWhatsAppObjetos() {
