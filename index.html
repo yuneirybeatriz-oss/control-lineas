@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Líneas, Objetos y Colores - Yune</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         :root {
             --primary: #ff4757;
@@ -308,17 +311,7 @@
 
 <div class="container">
     <h2>Control de Juego - Yune</h2>
-    <p class="subtitle">Organizado y sin enredos</p>
-
-    <!-- BOTONES DE SINCRONIZACIÓN INTELIGENTE -->
-    <div class="sync-box">
-        <button onclick="enviarDatosAlOtroTelefono()" style="background: #25D366; color: white; flex: 1; font-size: 12px; padding: 8px;">
-            📤 Enviar Jugadoras/Saldos
-        </button>
-        <button onclick="pegarDatosDelOtroTelefono()" style="background: #3742fa; color: white; flex: 1; font-size: 12px; padding: 8px;">
-            📥 Cargar al Teléfono Actual
-        </button>
-    </div>
+    <p class="subtitle">Organizado y en tiempo real (Firebase)</p>
 
     <!-- SELECTOR DE MODO -->
     <div class="mode-selector">
@@ -484,6 +477,16 @@
 </div>
 
 <script>
+    // CONFIGURACIÓN DE FIREBASE USANDO TU MISMO PROYECTO
+    const firebaseConfig = {
+        databaseURL: "https://bingo-lineal-yune-default-rtdb.firebaseio.com/"
+    };
+    
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const dbRef = firebase.database().ref('control_juego_yune');
+
     const totalLineas = 15;
     const totalObjetos = 20;
     const totalColores = 10;
@@ -501,32 +504,19 @@
         "🟣 Morado", "🩷 Rosado", "🩵 Celeste", "🟤 Marrón", "⚪ Blanco"
     ];
 
-    function enviarDatosAlOtroTelefono() {
-        let datosSincronizables = {
-            'jugadoras_fijas': localStorage.getItem('jugadoras_fijas'),
-            'saldos_jugadoras': localStorage.getItem('saldos_jugadoras')
-        };
-        let textoComprimido = encodeURIComponent(JSON.stringify(datosSincronizables));
-        let urlWhatsApp = `https://wa.me/?text=SYNC_BINGO_JUGADORAS:${textoComprimido}`;
-        window.open(urlWhatsApp, '_blank');
-    }
-
-    function pegarDatosDelOtroTelefono() {
-        let codigoRecibido = prompt("Pega aquí el texto largo que te llegó por WhatsApp:");
-        if (codigoRecibido) {
-            try {
-                let limpio = codigoRecibido.replace('SYNC_BINGO_JUGADORAS:', '').trim();
-                let datosDesempaquetados = JSON.parse(decodeURIComponent(limpio));
-                
-                if (datosDesempaquetados.jugadoras_fijas) localStorage.setItem('jugadoras_fijas', datosDesempaquetados.jugadoras_fijas);
-                if (datosDesempaquetados.saldos_jugadoras) localStorage.setItem('saldos_jugadoras', datosDesempaquetados.saldos_jugadoras);
-
-                alert("¡Jugadoras y saldos sincronizados con éxito! La página se recargará.");
-                location.reload();
-            } catch (error) {
-                alert("El código no es válido o está incompleto.");
-            }
+    // CARGA DE DATOS EN TIEMPO REAL DESDE FIREBASE
+    dbRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            window._dbRemota = data;
+        } else {
+            window._dbRemota = {};
         }
+        actualizarTodoLocal();
+    });
+
+    function guardarEnFirebase(clave, valor) {
+        dbRef.child(clave).set(valor);
     }
 
     function cambiarModo(modo) {
@@ -547,34 +537,40 @@
         if (modo === 'lineas') {
             btnLineas.className = 'btn-mode active-lineas';
             secLineas.style.display = 'block';
-            localStorage.setItem('modo_activo_yune', 'lineas');
+            guardarEnFirebase('modo_activo_yune', 'lineas');
         } else if (modo === 'objetos') {
             btnObjetos.className = 'btn-mode active-objetos';
             secObjetos.style.display = 'block';
-            localStorage.setItem('modo_activo_yune', 'objetos');
+            guardarEnFirebase('modo_activo_yune', 'objetos');
             renderizarObjetos();
             actualizarNombresPremiosObjGuardados();
         } else if (modo === 'colores') {
             btnColores.className = 'btn-mode active-colores';
             secColores.style.display = 'block';
-            localStorage.setItem('modo_activo_yune', 'colores');
+            guardarEnFirebase('modo_activo_yune', 'colores');
             renderizarColores();
             actualizarNombresPremiosColGuardados();
         }
     }
 
-    function obtenerRondaActual() { return parseInt(localStorage.getItem('numero_ronda') || '1'); }
-    function actualizarIndicadorRonda() { document.getElementById('display-ronda').textContent = `RONDA ${obtenerRondaActual()}`; }
+    function obtenerRondaActual() { 
+        return parseInt(window._dbRemota && window._dbRemota.numero_ronda ? window._dbRemota.numero_ronda : '1'); 
+    }
+    function actualizarIndicadorRonda() { 
+        document.getElementById('display-ronda').textContent = `RONDA ${obtenerRondaActual()}`; 
+    }
 
-    function guardarValorLinea() { localStorage.setItem('valor_linea_costo', document.getElementById('valor_linea_config').value); }
-    function cargarValorLinea() { document.getElementById('valor_linea_config').value = localStorage.getItem('valor_linea_costo') || ''; }
-    function guardarValorObjeto() { localStorage.setItem('valor_objeto_costo', document.getElementById('valor_objeto_config').value); }
-    function cargarValorObjeto() { document.getElementById('valor_objeto_config').value = localStorage.getItem('valor_objeto_costo') || ''; }
-    function guardarValorColor() { localStorage.setItem('valor_color_costo', document.getElementById('valor_color_config').value); }
-    function cargarValorColor() { document.getElementById('valor_color_config').value = localStorage.getItem('valor_color_costo') || ''; }
+    function guardarValorLinea() { guardarEnFirebase('valor_linea_costo', document.getElementById('valor_linea_config').value); }
+    function cargarValorLinea() { document.getElementById('valor_linea_config').value = (window._dbRemota && window._dbRemota.valor_linea_costo) || ''; }
+    function guardarValorObjeto() { guardarEnFirebase('valor_objeto_costo', document.getElementById('valor_objeto_config').value); }
+    function cargarValorObjeto() { document.getElementById('valor_objeto_config').value = (window._dbRemota && window._dbRemota.valor_objeto_costo) || ''; }
+    function guardarValorColor() { guardarEnFirebase('valor_color_costo', document.getElementById('valor_color_config').value); }
+    function cargarValorColor() { document.getElementById('valor_color_config').value = (window._dbRemota && window._dbRemota.valor_color_costo) || ''; }
 
-    function obtenerJugadorasFijas() { return JSON.parse(localStorage.getItem('jugadoras_fijas') || '[]'); }
-    function guardarJugadorasFijas(lista) { localStorage.setItem('jugadoras_fijas', JSON.stringify(lista)); }
+    function obtenerJugadorasFijas() { 
+        return (window._dbRemota && window._dbRemota.jugadoras_fijas) ? JSON.parse(window._dbRemota.jugadoras_fijas) : []; 
+    }
+    function guardarJugadorasFijas(lista) { guardarEnFirebase('jugadoras_fijas', JSON.stringify(lista)); }
 
     function agregarJugadoraFija() {
         let input = document.getElementById('nueva_jugadora_nombre');
@@ -586,7 +582,6 @@
             lista.sort();
             guardarJugadorasFijas(lista);
             input.value = "";
-            actualizarTodo();
         } else {
             alert("Esta jugadora ya está en tu lista fija.");
         }
@@ -597,7 +592,6 @@
             let lista = obtenerJugadorasFijas();
             lista = lista.filter(j => j !== nombre);
             guardarJugadorasFijas(lista);
-            actualizarTodo();
         }
     }
 
@@ -619,8 +613,8 @@
         let listaFijas = obtenerJugadorasFijas();
 
         for (let i = 1; i <= totalLineas; i++) {
-            let guardado = localStorage.getItem('linea_ronda_' + i) || '';
-            let estadoPago = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
+            let guardado = (window._dbRemota && window._dbRemota['linea_ronda_' + i]) || '';
+            let estadoPago = (window._dbRemota && window._dbRemota['estado_pago_linea_' + i]) || 'pendiente';
 
             let row = document.createElement('div');
             row.className = 'line-row';
@@ -648,9 +642,9 @@
 
             select.addEventListener('change', function() {
                 let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
-                let anteriorJugadora = localStorage.getItem('linea_ronda_' + i) || '';
+                let anteriorJugadora = (window._dbRemota && window._dbRemota['linea_ronda_' + i]) || '';
                 let nuevaJugadora = select.value;
-                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
 
                 if (anteriorJugadora !== "" && valorLinea > 0) {
                     if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
@@ -662,19 +656,16 @@
                     saldos[nuevaJugadora] -= valorLinea;
                     
                     if (saldos[nuevaJugadora] >= 0) {
-                        localStorage.setItem('estado_pago_linea_' + i, 'pagado');
+                        guardarEnFirebase('estado_pago_linea_' + i, 'pagado');
                     } else {
-                        localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                        guardarEnFirebase('estado_pago_linea_' + i, 'pendiente');
                     }
                 }
 
-                localStorage.setItem('linea_ronda_' + i, nuevaJugadora);
-                if (nuevaJugadora === "") localStorage.removeItem('estado_pago_linea_' + i);
+                guardarEnFirebase('linea_ronda_' + i, nuevaJugadora);
+                if (nuevaJugadora === "") guardarEnFirebase('estado_pago_linea_' + i, null);
 
-                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
-                renderizarLineas();
-                actualizarNombresPremiosGuardados();
-                mostrarSaldos();
+                guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             });
 
             let btnPago = document.createElement('button');
@@ -685,27 +676,25 @@
                 let nombreJugadora = select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en esta línea primero."); return; }
 
-                let estadoActual = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
+                let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_linea_' + i]) || 'pendiente';
                 let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
-                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
 
                 if (estadoActual === 'pendiente') {
-                    localStorage.setItem('estado_pago_linea_' + i, 'pagado');
+                    guardarEnFirebase('estado_pago_linea_' + i, 'pagado');
                     if (valorLinea > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                         saldos[nombreJugadora] += valorLinea; 
                     }
                 } else {
-                    localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                    guardarEnFirebase('estado_pago_linea_' + i, 'pendiente');
                     if (valorLinea > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                         saldos[nombreJugadora] -= valorLinea;
                     }
                 }
 
-                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
-                renderizarLineas();
-                mostrarSaldos();
+                guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             });
 
             row.appendChild(num);
@@ -722,8 +711,8 @@
         let listaFijas = obtenerJugadorasFijas();
 
         for (let i = 1; i <= totalObjetos; i++) {
-            let guardado = localStorage.getItem('objeto_ronda_' + i) || '';
-            let estadoPago = localStorage.getItem('estado_pago_objeto_' + i) || 'pendiente';
+            let guardado = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
+            let estadoPago = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
             let nombreObjeto = listaObjetosNombres[i - 1];
 
             let row = document.createElement('div');
@@ -754,9 +743,9 @@
 
             select.addEventListener('change', function() {
                 let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
-                let anteriorJugadora = localStorage.getItem('objeto_ronda_' + i) || '';
+                let anteriorJugadora = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
                 let nuevaJugadora = select.value;
-                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
 
                 if (anteriorJugadora !== "" && valorObjeto > 0) {
                     if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
@@ -768,19 +757,16 @@
                     saldos[nuevaJugadora] -= valorObjeto;
                     
                     if (saldos[nuevaJugadora] >= 0) {
-                        localStorage.setItem('estado_pago_objeto_' + i, 'pagado');
+                        guardarEnFirebase('estado_pago_objeto_' + i, 'pagado');
                     } else {
-                        localStorage.setItem('estado_pago_objeto_' + i, 'pendiente');
+                        guardarEnFirebase('estado_pago_objeto_' + i, 'pendiente');
                     }
                 }
 
-                localStorage.setItem('objeto_ronda_' + i, nuevaJugadora);
-                if (nuevaJugadora === "") localStorage.removeItem('estado_pago_objeto_' + i);
+                guardarEnFirebase('objeto_ronda_' + i, nuevaJugadora);
+                if (nuevaJugadora === "") guardarEnFirebase('estado_pago_objeto_' + i, null);
 
-                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
-                renderizarObjetos();
-                actualizarNombresPremiosObjGuardados();
-                mostrarSaldos();
+                guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             });
 
             let btnPago = document.createElement('button');
@@ -791,27 +777,25 @@
                 let nombreJugadora = select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este objeto primero."); return; }
 
-                let estadoActual = localStorage.getItem('estado_pago_objeto_' + i) || 'pendiente';
+                let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
                 let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
-                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
 
                 if (estadoActual === 'pendiente') {
-                    localStorage.setItem('estado_pago_objeto_' + i, 'pagado');
+                    guardarEnFirebase('estado_pago_objeto_' + i, 'pagado');
                     if (valorObjeto > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                         saldos[nombreJugadora] += valorObjeto; 
                     }
                 } else {
-                    localStorage.setItem('estado_pago_objeto_' + i, 'pendiente');
+                    guardarEnFirebase('estado_pago_objeto_' + i, 'pendiente');
                     if (valorObjeto > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                         saldos[nombreJugadora] -= valorObjeto;
                     }
                 }
 
-                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
-                renderizarObjetos();
-                mostrarSaldos();
+                guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             });
 
             row.appendChild(num);
@@ -828,8 +812,8 @@
         let listaFijas = obtenerJugadorasFijas();
 
         for (let i = 1; i <= totalColores; i++) {
-            let guardado = localStorage.getItem('color_ronda_' + i) || '';
-            let estadoPago = localStorage.getItem('estado_pago_color_' + i) || 'pendiente';
+            let guardado = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
+            let estadoPago = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
             let nombreColor = listaColoresNombres[i - 1];
 
             let row = document.createElement('div');
@@ -860,9 +844,9 @@
 
             select.addEventListener('change', function() {
                 let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
-                let anteriorJugadora = localStorage.getItem('color_ronda_' + i) || '';
+                let anteriorJugadora = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
                 let nuevaJugadora = select.value;
-                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
 
                 if (anteriorJugadora !== "" && valorColor > 0) {
                     if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
@@ -874,19 +858,16 @@
                     saldos[nuevaJugadora] -= valorColor;
                     
                     if (saldos[nuevaJugadora] >= 0) {
-                        localStorage.setItem('estado_pago_color_' + i, 'pagado');
+                        guardarEnFirebase('estado_pago_color_' + i, 'pagado');
                     } else {
-                        localStorage.setItem('estado_pago_color_' + i, 'pendiente');
+                        guardarEnFirebase('estado_pago_color_' + i, 'pendiente');
                     }
                 }
 
-                localStorage.setItem('color_ronda_' + i, nuevaJugadora);
-                if (nuevaJugadora === "") localStorage.removeItem('estado_pago_color_' + i);
+                guardarEnFirebase('color_ronda_' + i, nuevaJugadora);
+                if (nuevaJugadora === "") guardarEnFirebase('estado_pago_color_' + i, null);
 
-                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
-                renderizarColores();
-                actualizarNombresPremiosColGuardados();
-                mostrarSaldos();
+                guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             });
 
             let btnPago = document.createElement('button');
@@ -897,27 +878,25 @@
                 let nombreJugadora = select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este color primero."); return; }
 
-                let estadoActual = localStorage.getItem('estado_pago_color_' + i) || 'pendiente';
+                let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
                 let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
-                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
 
                 if (estadoActual === 'pendiente') {
-                    localStorage.setItem('estado_pago_color_' + i, 'pagado');
+                    guardarEnFirebase('estado_pago_color_' + i, 'pagado');
                     if (valorColor > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                         saldos[nombreJugadora] += valorColor; 
                     }
                 } else {
-                    localStorage.setItem('estado_pago_color_' + i, 'pendiente');
+                    guardarEnFirebase('estado_pago_color_' + i, 'pendiente');
                     if (valorColor > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                         saldos[nombreJugadora] -= valorColor;
                     }
                 }
 
-                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
-                renderizarColores();
-                mostrarSaldos();
+                guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             });
 
             row.appendChild(num);
@@ -934,7 +913,7 @@
         if (numInput === "") { lbl.textContent = "--"; return; }
         let idx = parseInt(numInput);
         if (idx >= 1 && idx <= totalLineas) {
-            let jugadora = localStorage.getItem('linea_ronda_' + idx) || '';
+            let jugadora = (window._dbRemota && window._dbRemota['linea_ronda_' + idx]) || '';
             lbl.textContent = jugadora !== "" ? "👤 " + jugadora : "⚠️ Vacía / Nadie";
         } else {
             lbl.textContent = "❌ N° inválido";
@@ -947,7 +926,7 @@
         if (numInput === "") { lbl.textContent = "--"; return; }
         let idx = parseInt(numInput);
         if (idx >= 1 && idx <= totalObjetos) {
-            let jugadora = localStorage.getItem('objeto_ronda_' + idx) || '';
+            let jugadora = (window._dbRemota && window._dbRemota['objeto_ronda_' + idx]) || '';
             lbl.textContent = jugadora !== "" ? "👤 " + jugadora : "⚠️ Vacía / Nadie";
         } else {
             lbl.textContent = "❌ N° inválido";
@@ -960,7 +939,7 @@
         if (numInput === "") { lbl.textContent = "--"; return; }
         let idx = parseInt(numInput);
         if (idx >= 1 && idx <= totalColores) {
-            let jugadora = localStorage.getItem('color_ronda_' + idx) || '';
+            let jugadora = (window._dbRemota && window._dbRemota['color_ronda_' + idx]) || '';
             lbl.textContent = jugadora !== "" ? "👤 " + jugadora : "⚠️ Vacía / Nadie";
         } else {
             lbl.textContent = "❌ N° inválido";
@@ -969,48 +948,48 @@
 
     function actualizarNombresPremiosGuardados() {
         for (let p = 1; p <= 4; p++) {
-            let val = localStorage.getItem('premio_num_def_' + p) || '';
+            let val = (window._dbRemota && window._dbRemota['premio_num_def_' + p]) || '';
             document.getElementById('num_ganadora_' + p).value = val;
             actualizarNombrePremio(p);
-            let montoVal = localStorage.getItem('premio_monto_def_' + p) || '';
+            let montoVal = (window._dbRemota && window._dbRemota['premio_monto_def_' + p]) || '';
             if (montoVal) document.getElementById('monto_' + p).value = montoVal;
         }
     }
 
     function actualizarNombresPremiosObjGuardados() {
         for (let p = 1; p <= 3; p++) {
-            let val = localStorage.getItem('premio_num_obj_def_' + p) || '';
+            let val = (window._dbRemota && window._dbRemota['premio_num_obj_def_' + p]) || '';
             document.getElementById('num_ganadora_obj_' + p).value = val;
             actualizarNombrePremioObj(p);
-            let montoVal = localStorage.getItem('premio_monto_obj_def_' + p) || '';
+            let montoVal = (window._dbRemota && window._dbRemota['premio_monto_obj_def_' + p]) || '';
             if (montoVal) document.getElementById('monto_obj_' + p).value = montoVal;
         }
     }
 
     function actualizarNombresPremiosColGuardados() {
         for (let p = 1; p <= 3; p++) {
-            let val = localStorage.getItem('premio_num_col_def_' + p) || '';
+            let val = (window._dbRemota && window._dbRemota['premio_num_col_def_' + p]) || '';
             document.getElementById('num_ganadora_col_' + p).value = val;
             actualizarNombrePremioCol(p);
-            let montoVal = localStorage.getItem('premio_monto_col_def_' + p) || '';
+            let montoVal = (window._dbRemota && window._dbRemota['premio_monto_col_def_' + p]) || '';
             if (montoVal) document.getElementById('monto_col_' + p).value = montoVal;
         }
     }
 
     function guardarPremioTemporal(p) {
-        localStorage.setItem('premio_num_def_' + p, document.getElementById('num_ganadora_' + p).value);
-        localStorage.setItem('premio_monto_def_' + p, document.getElementById('monto_' + p).value);
+        guardarEnFirebase('premio_num_def_' + p, document.getElementById('num_ganadora_' + p).value);
+        guardarEnFirebase('premio_monto_def_' + p, document.getElementById('monto_' + p).value);
     }
     function guardarPremioObjTemporal(p) {
-        localStorage.setItem('premio_num_obj_def_' + p, document.getElementById('num_ganadora_obj_' + p).value);
-        localStorage.setItem('premio_monto_obj_def_' + p, document.getElementById('monto_obj_' + p).value);
+        guardarEnFirebase('premio_num_obj_def_' + p, document.getElementById('num_ganadora_obj_' + p).value);
+        guardarEnFirebase('premio_monto_obj_def_' + p, document.getElementById('monto_obj_' + p).value);
     }
     function guardarPremioColTemporal(p) {
-        localStorage.setItem('premio_num_col_def_' + p, document.getElementById('num_ganadora_col_' + p).value);
-        localStorage.setItem('premio_monto_col_def_' + p, document.getElementById('monto_col_' + p).value);
+        guardarEnFirebase('premio_num_col_def_' + p, document.getElementById('num_ganadora_col_' + p).value);
+        guardarEnFirebase('premio_monto_col_def_' + p, document.getElementById('monto_col_' + p).value);
     }
 
-    function actualizarTodo() {
+    function actualizarTodoLocal() {
         actualizarIndicadorRonda();
         cargarValorLinea();
         cargarValorObjeto();
@@ -1037,7 +1016,7 @@
         let asignadas = 0;
         for (let i = 1; i <= totalLineas; i++) {
             let val = document.getElementById('select_linea_' + i).value.trim();
-            let estado = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
+            let estado = (window._dbRemota && window._dbRemota['estado_pago_linea_' + i]) || 'pendiente';
             let iconoEstado = (estado === 'pagado') ? '✔️' : '❌';
 
             if (val !== "") {
@@ -1061,7 +1040,7 @@
         let asignados = 0;
         for (let i = 1; i <= totalObjetos; i++) {
             let val = document.getElementById('select_objeto_' + i).value.trim();
-            let estado = localStorage.getItem('estado_pago_objeto_' + i) || 'pendiente';
+            let estado = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
             let iconoEstado = (estado === 'pagado') ? '✔️' : '❌';
             let nombreObj = listaObjetosNombres[i - 1];
 
@@ -1086,7 +1065,7 @@
         let asignados = 0;
         for (let i = 1; i <= totalColores; i++) {
             let val = document.getElementById('select_color_' + i).value.trim();
-            let estado = localStorage.getItem('estado_pago_color_' + i) || 'pendiente';
+            let estado = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
             let iconoEstado = (estado === 'pagado') ? '✔️' : '❌';
             let nombreCol = listaColoresNombres[i - 1];
 
@@ -1104,61 +1083,58 @@
     function limpiarLineasRonda() {
         if (confirm("¿Vaciar las 15 líneas de esta ronda?")) {
             for (let i = 1; i <= totalLineas; i++) {
-                let jugadora = localStorage.getItem('linea_ronda_' + i) || '';
+                let jugadora = (window._dbRemota && window._dbRemota['linea_ronda_' + i]) || '';
                 let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
                 if (jugadora !== "" && valorLinea > 0) {
-                    let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                    let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
                     if (!saldos[jugadora]) saldos[jugadora] = 0;
                     saldos[jugadora] += valorLinea;
-                    localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+                    guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
                 }
-                localStorage.removeItem('linea_ronda_' + i);
-                localStorage.removeItem('estado_pago_linea_' + i);
+                guardarEnFirebase('linea_ronda_' + i, null);
+                guardarEnFirebase('estado_pago_linea_' + i, null);
             }
-            actualizarTodo();
         }
     }
 
     function limpiarObjetosRonda() {
         if (confirm("¿Vaciar los 20 objetos de esta ronda?")) {
             for (let i = 1; i <= totalObjetos; i++) {
-                let jugadora = localStorage.getItem('objeto_ronda_' + i) || '';
+                let jugadora = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
                 let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
                 if (jugadora !== "" && valorObjeto > 0) {
-                    let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                    let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
                     if (!saldos[jugadora]) saldos[jugadora] = 0;
                     saldos[jugadora] += valorObjeto;
-                    localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+                    guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
                 }
-                localStorage.removeItem('objeto_ronda_' + i);
-                localStorage.removeItem('estado_pago_objeto_' + i);
+                guardarEnFirebase('objeto_ronda_' + i, null);
+                guardarEnFirebase('estado_pago_objeto_' + i, null);
             }
-            actualizarTodo();
         }
     }
 
     function limpiarColoresRonda() {
         if (confirm("¿Vaciar los 10 colores de esta ronda?")) {
             for (let i = 1; i <= totalColores; i++) {
-                let jugadora = localStorage.getItem('color_ronda_' + i) || '';
+                let jugadora = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
                 let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
                 if (jugadora !== "" && valorColor > 0) {
-                    let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                    let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
                     if (!saldos[jugadora]) saldos[jugadora] = 0;
                     saldos[jugadora] += valorColor;
-                    localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+                    guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
                 }
-                localStorage.removeItem('color_ronda_' + i);
-                localStorage.removeItem('estado_pago_color_' + i);
+                guardarEnFirebase('color_ronda_' + i, null);
+                guardarEnFirebase('estado_pago_color_' + i, null);
             }
-            actualizarTodo();
         }
     }
 
-    // ================= GUARDAR RONDA Y SUMAR PREMIOS (MANTENIENDO MONTOS FIJOS) =================
+    // ================= GUARDAR RONDA Y SUMAR PREMIOS =================
     function guardarRonda() {
-        let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
-        let historial = JSON.parse(localStorage.getItem('historial_rondas_lista') || '[]');
+        let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
+        let historial = (window._dbRemota && window._dbRemota.historial_rondas_lista) ? JSON.parse(window._dbRemota.historial_rondas_lista) : [];
         let rondaActual = obtenerRondaActual();
         let registradas = 0;
         let resumenRondaText = `Ronda ${rondaActual} (Líneas): `;
@@ -1170,7 +1146,7 @@
             if (numInput !== "" && monto > 0) {
                 let idx = parseInt(numInput);
                 if (idx >= 1 && idx <= totalLineas) {
-                    let nombre = localStorage.getItem('linea_ronda_' + idx) || '';
+                    let nombre = (window._dbRemota && window._dbRemota['linea_ronda_' + idx]) || '';
                     if (nombre !== "") {
                         if (!saldos[nombre]) saldos[nombre] = 0;
                         saldos[nombre] += monto; 
@@ -1182,26 +1158,23 @@
         }
 
         if (registradas > 0) {
-            localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+            guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             historial.push(resumenRondaText);
-            localStorage.setItem('historial_rondas_lista', JSON.stringify(historial));
+            guardarEnFirebase('historial_rondas_lista', JSON.stringify(historial));
             
-            // SOLO borramos el número de la ganadora y su etiqueta, ¡los montos (6000, 4000...) SE QUEDAN GUARDADOS!
             for (let p = 1; p <= 4; p++) {
-                localStorage.removeItem('premio_num_def_' + p);
+                guardarEnFirebase('premio_num_def_' + p, null);
                 document.getElementById('num_ganadora_' + p).value = '';
                 document.getElementById('lbl_ganadora_' + p).textContent = '--';
             }
 
-            // Vaciamos las líneas de la ronda para que queden listas para la siguiente
             for (let i = 1; i <= totalLineas; i++) {
-                localStorage.removeItem('linea_ronda_' + i);
-                localStorage.removeItem('estado_pago_linea_' + i);
+                guardarEnFirebase('linea_ronda_' + i, null);
+                guardarEnFirebase('estado_pago_linea_' + i, null);
             }
 
             let nuevaRonda = rondaActual + 1;
-            localStorage.setItem('numero_ronda', nuevaRonda);
-            actualizarTodo();
+            guardarEnFirebase('numero_ronda', nuevaRonda);
             alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Líneas vaciadas y montos de premios intactos.`);
         } else {
             alert("Por favor introduce números de línea válidos y montos de premio.");
@@ -1209,8 +1182,8 @@
     }
 
     function guardarRondaObjetos() {
-        let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
-        let historial = JSON.parse(localStorage.getItem('historial_rondas_lista') || '[]');
+        let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
+        let historial = (window._dbRemota && window._dbRemota.historial_rondas_lista) ? JSON.parse(window._dbRemota.historial_rondas_lista) : [];
         let rondaActual = obtenerRondaActual();
         let registradas = 0;
         let resumenRondaText = `Ronda ${rondaActual} (Objetos): `;
@@ -1222,7 +1195,7 @@
             if (numInput !== "" && monto > 0) {
                 let idx = parseInt(numInput);
                 if (idx >= 1 && idx <= totalObjetos) {
-                    let nombre = localStorage.getItem('objeto_ronda_' + idx) || '';
+                    let nombre = (window._dbRemota && window._dbRemota['objeto_ronda_' + idx]) || '';
                     if (nombre !== "") {
                         if (!saldos[nombre]) saldos[nombre] = 0;
                         saldos[nombre] += monto; 
@@ -1234,24 +1207,23 @@
         }
 
         if (registradas > 0) {
-            localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+            guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             historial.push(resumenRondaText);
-            localStorage.setItem('historial_rondas_lista', JSON.stringify(historial));
+            guardarEnFirebase('historial_rondas_lista', JSON.stringify(historial));
             
             for (let p = 1; p <= 3; p++) {
-                localStorage.removeItem('premio_num_obj_def_' + p);
+                guardarEnFirebase('premio_num_obj_def_' + p, null);
                 document.getElementById('num_ganadora_obj_' + p).value = '';
                 document.getElementById('lbl_ganadora_obj_' + p).textContent = '--';
             }
 
             for (let i = 1; i <= totalObjetos; i++) {
-                localStorage.removeItem('objeto_ronda_' + i);
-                localStorage.removeItem('estado_pago_objeto_' + i);
+                guardarEnFirebase('objeto_ronda_' + i, null);
+                guardarEnFirebase('estado_pago_objeto_' + i, null);
             }
 
             let nuevaRonda = rondaActual + 1;
-            localStorage.setItem('numero_ronda', nuevaRonda);
-            actualizarTodo();
+            guardarEnFirebase('numero_ronda', nuevaRonda);
             alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Objetos vaciados y montos intactos.`);
         } else {
             alert("Por favor introduce números de objeto válidos y montos.");
@@ -1259,8 +1231,8 @@
     }
 
     function guardarRondaColores() {
-        let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
-        let historial = JSON.parse(localStorage.getItem('historial_rondas_lista') || '[]');
+        let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
+        let historial = (window._dbRemota && window._dbRemota.historial_rondas_lista) ? JSON.parse(window._dbRemota.historial_rondas_lista) : [];
         let rondaActual = obtenerRondaActual();
         let registradas = 0;
         let resumenRondaText = `Ronda ${rondaActual} (Colores): `;
@@ -1272,7 +1244,7 @@
             if (numInput !== "" && monto > 0) {
                 let idx = parseInt(numInput);
                 if (idx >= 1 && idx <= totalColores) {
-                    let nombre = localStorage.getItem('color_ronda_' + idx) || '';
+                    let nombre = (window._dbRemota && window._dbRemota['color_ronda_' + idx]) || '';
                     if (nombre !== "") {
                         if (!saldos[nombre]) saldos[nombre] = 0;
                         saldos[nombre] += monto; 
@@ -1284,24 +1256,23 @@
         }
 
         if (registradas > 0) {
-            localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
+            guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             historial.push(resumenRondaText);
-            localStorage.setItem('historial_rondas_lista', JSON.stringify(historial));
+            guardarEnFirebase('historial_rondas_lista', JSON.stringify(historial));
             
             for (let p = 1; p <= 3; p++) {
-                localStorage.removeItem('premio_num_col_def_' + p);
+                guardarEnFirebase('premio_num_col_def_' + p, null);
                 document.getElementById('num_ganadora_col_' + p).value = '';
                 document.getElementById('lbl_ganadora_col_' + p).textContent = '--';
             }
 
             for (let i = 1; i <= totalColores; i++) {
-                localStorage.removeItem('color_ronda_' + i);
-                localStorage.removeItem('estado_pago_color_' + i);
+                guardarEnFirebase('color_ronda_' + i, null);
+                guardarEnFirebase('estado_pago_color_' + i, null);
             }
 
             let nuevaRonda = rondaActual + 1;
-            localStorage.setItem('numero_ronda', nuevaRonda);
-            actualizarTodo();
+            guardarEnFirebase('numero_ronda', nuevaRonda);
             alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Colores vaciados y montos intactos.`);
         } else {
             alert("Por favor introduce números de color válidos y montos.");
@@ -1313,11 +1284,10 @@
         if (montoStr !== null && montoStr.trim() !== "") {
             let cambio = parseFloat(montoStr);
             if (!isNaN(cambio)) {
-                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+                let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
                 if (!saldos[nombre]) saldos[nombre] = 0;
                 saldos[nombre] += cambio;
-                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
-                actualizarTodo();
+                guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             } else {
                 alert("Por favor introduce un número válido.");
             }
@@ -1326,10 +1296,9 @@
 
     function liquidarJugadora(nombre) {
         if (confirm(`¿Ya le pagaste o te pagó ${nombre}? Esto dejará su saldo en cero y la retirará de la lista.`)) {
-            let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+            let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
             delete saldos[nombre];
-            localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
-            actualizarTodo();
+            guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
         }
     }
 
@@ -1343,7 +1312,7 @@
 
     function mostrarSaldos() {
         let divSaldos = document.getElementById('lista-saldos');
-        let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+        let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
         let keys = Object.keys(saldos);
 
         if (keys.length === 0) {
@@ -1373,7 +1342,7 @@
 
     function mostrarHistorialRondas() {
         let divHistorial = document.getElementById('historial-rondas');
-        let historial = JSON.parse(localStorage.getItem('historial_rondas_lista') || '[]');
+        let historial = (window._dbRemota && window._dbRemota.historial_rondas_lista) ? JSON.parse(window._dbRemota.historial_rondas_lista) : [];
         if (historial.length === 0) { divHistorial.innerHTML = "<em>Aún no hay rondas finalizadas.</em>"; return; }
         let html = "";
         historial.forEach((item, index) => { html += `<div>• <b>Ronda ${index + 1}:</b> ${item}</div>`; });
@@ -1384,32 +1353,13 @@
         if (confirm("⚠️ ¿Reiniciar el día? Se borrarán todos los saldos, líneas, objetos, colores, historial y la ronda volverá a 1.")) {
             let confirmacion2 = prompt("Escribe la palabra 'BORRAR' para confirmar:");
             if (confirmacion2 && confirmacion2.toUpperCase() === "BORRAR") {
-                for (let i = 1; i <= totalLineas; i++) { localStorage.removeItem('linea_ronda_' + i); localStorage.removeItem('estado_pago_linea_' + i); }
-                for (let i = 1; i <= totalObjetos; i++) { localStorage.removeItem('objeto_ronda_' + i); localStorage.removeItem('estado_pago_objeto_' + i); }
-                for (let i = 1; i <= totalColores; i++) { localStorage.removeItem('color_ronda_' + i); localStorage.removeItem('estado_pago_color_' + i); }
-                localStorage.removeItem('saldos_jugadoras');
-                localStorage.removeItem('historial_rondas_lista');
-                localStorage.setItem('numero_ronda', '1');
-                for(let p=1; p<=4; p++) {
-                    localStorage.removeItem('premio_num_def_' + p);
-                    localStorage.removeItem('premio_monto_def_' + p);
-                    localStorage.removeItem('premio_num_obj_def_' + p);
-                    localStorage.removeItem('premio_monto_obj_def_' + p);
-                    localStorage.removeItem('premio_num_col_def_' + p);
-                    localStorage.removeItem('premio_monto_col_def_' + p);
-                }
-                localStorage.removeItem('valor_linea_costo');
-                localStorage.removeItem('valor_objeto_costo');
-                localStorage.removeItem('valor_color_costo');
-                actualizarTodo();
-                alert("¡Día reiniciado con éxito!");
+                dbRef.remove().then(() => {
+                    alert("¡Día reiniciado con éxito!");
+                    location.reload();
+                });
             }
         }
     }
-
-    let modoGuardado = localStorage.getItem('modo_activo_yune') || 'lineas';
-    cambiarModo(modoGuardado);
-    actualizarTodo();
 </script>
 
 </body>
