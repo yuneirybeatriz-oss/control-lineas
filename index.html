@@ -553,13 +553,13 @@
             secObjetos.style.display = 'block';
             localStorage.setItem('modo_activo_yune', 'objetos');
             renderizarObjetos();
-            actualizarNombresPremiosObjetosGuardados();
+            actualizarNombresPremiosObjGuardados();
         } else if (modo === 'colores') {
             btnColores.className = 'btn-mode active-colores';
             secColores.style.display = 'block';
             localStorage.setItem('modo_activo_yune', 'colores');
             renderizarColores();
-            actualizarNombresPremiosColoresGuardados();
+            actualizarNombresPremiosColGuardados();
         }
     }
 
@@ -1155,7 +1155,7 @@
         }
     }
 
-    // ================= GUARDAR RONDA Y SUMAR PREMIOS =================
+    // ================= GUARDAR RONDA Y SUMAR PREMIOS (MANTENIENDO MONTOS FIJOS) =================
     function guardarRonda() {
         let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
         let historial = JSON.parse(localStorage.getItem('historial_rondas_lista') || '[]');
@@ -1186,14 +1186,14 @@
             historial.push(resumenRondaText);
             localStorage.setItem('historial_rondas_lista', JSON.stringify(historial));
             
+            // SOLO borramos el número de la ganadora y su etiqueta, ¡los montos (6000, 4000...) SE QUEDAN GUARDADOS!
             for (let p = 1; p <= 4; p++) {
                 localStorage.removeItem('premio_num_def_' + p);
-                localStorage.removeItem('premio_monto_def_' + p);
                 document.getElementById('num_ganadora_' + p).value = '';
-                document.getElementById('monto_' + p).value = '';
                 document.getElementById('lbl_ganadora_' + p).textContent = '--';
             }
 
+            // Vaciamos las líneas de la ronda para que queden listas para la siguiente
             for (let i = 1; i <= totalLineas; i++) {
                 localStorage.removeItem('linea_ronda_' + i);
                 localStorage.removeItem('estado_pago_linea_' + i);
@@ -1202,7 +1202,7 @@
             let nuevaRonda = rondaActual + 1;
             localStorage.setItem('numero_ronda', nuevaRonda);
             actualizarTodo();
-            alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Líneas vaciadas.`);
+            alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Líneas vaciadas y montos de premios intactos.`);
         } else {
             alert("Por favor introduce números de línea válidos y montos de premio.");
         }
@@ -1240,9 +1240,7 @@
             
             for (let p = 1; p <= 3; p++) {
                 localStorage.removeItem('premio_num_obj_def_' + p);
-                localStorage.removeItem('premio_monto_obj_def_' + p);
                 document.getElementById('num_ganadora_obj_' + p).value = '';
-                document.getElementById('monto_obj_' + p).value = '';
                 document.getElementById('lbl_ganadora_obj_' + p).textContent = '--';
             }
 
@@ -1254,7 +1252,7 @@
             let nuevaRonda = rondaActual + 1;
             localStorage.setItem('numero_ronda', nuevaRonda);
             actualizarTodo();
-            alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Objetos vaciados.`);
+            alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Objetos vaciados y montos intactos.`);
         } else {
             alert("Por favor introduce números de objeto válidos y montos.");
         }
@@ -1292,9 +1290,7 @@
             
             for (let p = 1; p <= 3; p++) {
                 localStorage.removeItem('premio_num_col_def_' + p);
-                localStorage.removeItem('premio_monto_col_def_' + p);
                 document.getElementById('num_ganadora_col_' + p).value = '';
-                document.getElementById('monto_col_' + p).value = '';
                 document.getElementById('lbl_ganadora_col_' + p).textContent = '--';
             }
 
@@ -1306,7 +1302,7 @@
             let nuevaRonda = rondaActual + 1;
             localStorage.setItem('numero_ronda', nuevaRonda);
             actualizarTodo();
-            alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Colores vaciados.`);
+            alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Colores vaciados y montos intactos.`);
         } else {
             alert("Por favor introduce números de color válidos y montos.");
         }
@@ -1381,7 +1377,6 @@
         if (historial.length === 0) { divHistorial.innerHTML = "<em>Aún no hay rondas finalizadas.</em>"; return; }
         let html = "";
         historial.forEach((item, index) => { html += `<div>• <b>Ronda ${index + 1}:</b> ${item}</div>`; });
-        divHistorial.html = html;
         divHistorial.innerHTML = html;
     }
 
