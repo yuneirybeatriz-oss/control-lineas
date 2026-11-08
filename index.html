@@ -630,17 +630,20 @@
                 let nuevaJugadora = select.value;
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
-                // Si tenía a alguien antes, se le devuelve el dinero al saldo porque se deseleccionó o cambió
                 if (anteriorJugadora !== "" && valorLinea > 0) {
                     if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
                     saldos[anteriorJugadora] += valorLinea; 
                 }
 
-                // Si seleccionó a alguien nuevo, se le descuenta
                 if (nuevaJugadora !== "" && valorLinea > 0) {
                     if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
                     saldos[nuevaJugadora] -= valorLinea;
-                    localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                    
+                    if (saldos[nuevaJugadora] >= 0) {
+                        localStorage.setItem('estado_pago_linea_' + i, 'pagado');
+                    } else {
+                        localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                    }
                 }
 
                 localStorage.setItem('linea_ronda_' + i, nuevaJugadora);
@@ -661,26 +664,13 @@
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en esta línea primero."); return; }
 
                 let estadoActual = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
-                let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
-                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
                 if (estadoActual === 'pendiente') {
-                    // Al marcar como pagado, devolvemos el valor descontado previamente para cuadrar
                     localStorage.setItem('estado_pago_linea_' + i, 'pagado');
-                    if (valorLinea > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] += valorLinea; 
-                    }
                 } else {
-                    // Al volver a pendiente, se le vuelve a descontar del saldo
                     localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
-                    if (valorLinea > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] -= valorLinea;
-                    }
                 }
 
-                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarLineas();
                 mostrarSaldos();
             });
@@ -742,7 +732,12 @@
                 if (nuevaJugadora !== "" && valorObjeto > 0) {
                     if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
                     saldos[nuevaJugadora] -= valorObjeto;
-                    localStorage.setItem('estado_pago_objeto_' + i, 'pendiente');
+                    
+                    if (saldos[nuevaJugadora] >= 0) {
+                        localStorage.setItem('estado_pago_objeto_' + i, 'pagado');
+                    } else {
+                        localStorage.setItem('estado_pago_objeto_' + i, 'pendiente');
+                    }
                 }
 
                 localStorage.setItem('objeto_ronda_' + i, nuevaJugadora);
@@ -763,24 +758,13 @@
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este objeto primero."); return; }
 
                 let estadoActual = localStorage.getItem('estado_pago_objeto_' + i) || 'pendiente';
-                let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
-                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
                 if (estadoActual === 'pendiente') {
                     localStorage.setItem('estado_pago_objeto_' + i, 'pagado');
-                    if (valorObjeto > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] += valorObjeto; 
-                    }
                 } else {
                     localStorage.setItem('estado_pago_objeto_' + i, 'pendiente');
-                    if (valorObjeto > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] -= valorObjeto;
-                    }
                 }
 
-                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarObjetos();
                 mostrarSaldos();
             });
@@ -842,7 +826,12 @@
                 if (nuevaJugadora !== "" && valorColor > 0) {
                     if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
                     saldos[nuevaJugadora] -= valorColor;
-                    localStorage.setItem('estado_pago_color_' + i, 'pendiente');
+                    
+                    if (saldos[nuevaJugadora] >= 0) {
+                        localStorage.setItem('estado_pago_color_' + i, 'pagado');
+                    } else {
+                        localStorage.setItem('estado_pago_color_' + i, 'pendiente');
+                    }
                 }
 
                 localStorage.setItem('color_ronda_' + i, nuevaJugadora);
@@ -863,24 +852,13 @@
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este color primero."); return; }
 
                 let estadoActual = localStorage.getItem('estado_pago_color_' + i) || 'pendiente';
-                let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
-                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
                 if (estadoActual === 'pendiente') {
                     localStorage.setItem('estado_pago_color_' + i, 'pagado');
-                    if (valorColor > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] += valorColor; 
-                    }
                 } else {
                     localStorage.setItem('estado_pago_color_' + i, 'pendiente');
-                    if (valorColor > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] -= valorColor;
-                    }
                 }
 
-                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarColores();
                 mostrarSaldos();
             });
@@ -1007,17 +985,18 @@
         for (let i = 1; i <= totalLineas; i++) {
             let val = document.getElementById('select_linea_' + i).value.trim();
             let estado = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
-            let etiquetaPago = (estado === 'pagado') ? '*(Pagado)*' : '_(Pendiente)_';
+            // Símbolo limpio: Flecha verde (✔️) si pagó, Cruz roja (❌) si está pendiente
+            let iconoEstado = (estado === 'pagado') ? '✔️' : '❌';
 
             if (val !== "") {
-                texto += `${i} - *${val}* ${etiquetaPago}\n`;
+                texto += `${i} - *${val}* ${iconoEstado}\n`;
                 asignadas++;
             } else {
                 texto += `${i} - _Disponible_\n`;
             }
         }
         texto += `\nTotal asignadas: ${asignadas}/15`;
-        navigator.clipboard.writeText(texto).then(() => { alert("¡Lista de líneas copiada para WhatsApp!"); });
+        navigator.clipboard.writeText(texto).then(() => { alert("¡Lista de líneas copiada para WhatsApp con símbolos de pago!"); });
     }
 
     function copiarWhatsAppObjetos() {
@@ -1031,11 +1010,11 @@
         for (let i = 1; i <= totalObjetos; i++) {
             let val = document.getElementById('select_objeto_' + i).value.trim();
             let estado = localStorage.getItem('estado_pago_objeto_' + i) || 'pendiente';
-            let etiquetaPago = (estado === 'pagado') ? '*(Pagado)*' : '_(Pendiente)_';
+            let iconoEstado = (estado === 'pagado') ? '✔️' : '❌';
             let nombreObj = listaObjetosNombres[i - 1];
 
             if (val !== "") {
-                texto += `${nombreObj} - *${val}* ${etiquetaPago}\n`;
+                texto += `${nombreObj} - *${val}* ${iconoEstado}\n`;
                 asignados++;
             } else {
                 texto += `${nombreObj} - _Disponible_\n`;
@@ -1056,11 +1035,11 @@
         for (let i = 1; i <= totalColores; i++) {
             let val = document.getElementById('select_color_' + i).value.trim();
             let estado = localStorage.getItem('estado_pago_color_' + i) || 'pendiente';
-            let etiquetaPago = (estado === 'pagado') ? '*(Pagado)*' : '_(Pendiente)_';
+            let iconoEstado = (estado === 'pagado') ? '✔️' : '❌';
             let nombreCol = listaColoresNombres[i - 1];
 
             if (val !== "") {
-                texto += `${nombreCol} - *${val}* ${etiquetaPago}\n`;
+                texto += `${nombreCol} - *${val}* ${iconoEstado}\n`;
                 asignados++;
             } else {
                 texto += `${nombreCol} - _Disponible_\n`;
