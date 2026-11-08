@@ -631,18 +631,15 @@
                 let nuevaJugadora = select.value;
                 let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
 
-                // 1. Devolver saldo a la jugadora anterior si se quita o cambia
                 if (anteriorJugadora !== "" && valorLinea > 0) {
                     if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
                     saldos[anteriorJugadora] += valorLinea; 
                 }
 
-                // 2. Descontar saldo a la nueva jugadora
                 if (nuevaJugadora !== "" && valorLinea > 0) {
                     if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
                     saldos[nuevaJugadora] -= valorLinea;
                     
-                    // Si la jugadora tiene saldo positivo o queda al día (>=0), se marca automáticamente en verde (pagado)
                     if (saldos[nuevaJugadora] >= 0) {
                         localStorage.setItem('estado_pago_linea_' + i, 'pagado');
                     } else {
@@ -663,19 +660,31 @@
             btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
             
-            // Botón manual para cambiar entre pagado y pendiente sin alterar los números
             btnPago.addEventListener('click', function() {
                 let nombreJugadora = select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en esta línea primero."); return; }
 
                 let estadoActual = localStorage.getItem('estado_pago_linea_' + i) || 'pendiente';
+                let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
+                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+
                 if (estadoActual === 'pendiente') {
                     localStorage.setItem('estado_pago_linea_' + i, 'pagado');
+                    if (valorLinea > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] += valorLinea; 
+                    }
                 } else {
                     localStorage.setItem('estado_pago_linea_' + i, 'pendiente');
+                    if (valorLinea > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] -= valorLinea;
+                    }
                 }
 
+                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarLineas();
+                mostrarSaldos();
             });
 
             row.appendChild(num);
@@ -762,13 +771,26 @@
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este objeto primero."); return; }
 
                 let estadoActual = localStorage.getItem('estado_pago_objeto_' + i) || 'pendiente';
+                let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
+                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+
                 if (estadoActual === 'pendiente') {
                     localStorage.setItem('estado_pago_objeto_' + i, 'pagado');
+                    if (valorObjeto > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] += valorObjeto; 
+                    }
                 } else {
                     localStorage.setItem('estado_pago_objeto_' + i, 'pendiente');
+                    if (valorObjeto > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] -= valorObjeto;
+                    }
                 }
 
+                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarObjetos();
+                mostrarSaldos();
             });
 
             row.appendChild(num);
@@ -855,13 +877,26 @@
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este color primero."); return; }
 
                 let estadoActual = localStorage.getItem('estado_pago_color_' + i) || 'pendiente';
+                let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
+                let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
+
                 if (estadoActual === 'pendiente') {
                     localStorage.setItem('estado_pago_color_' + i, 'pagado');
+                    if (valorColor > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] += valorColor; 
+                    }
                 } else {
                     localStorage.setItem('estado_pago_color_' + i, 'pendiente');
+                    if (valorColor > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] -= valorColor;
+                    }
                 }
 
+                localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarColores();
+                mostrarSaldos();
             });
 
             row.appendChild(num);
