@@ -225,14 +225,25 @@
             display: block;
             margin-bottom: 3px;
         }
-        .premio-box input, .premio-box select {
+        .premio-box input {
             width: 100%;
             padding: 6px;
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 13px;
             box-sizing: border-box;
+            text-align: center;
+            font-weight: bold;
         }
+        .premio-ganadora-label {
+            font-size: 11px;
+            color: #2ed573;
+            font-weight: bold;
+            margin-top: 3px;
+            text-align: center;
+            min-height: 15px;
+        }
+
         .registry-box {
             background: #f8f9fa;
             padding: 10px;
@@ -346,26 +357,30 @@
         <div class="section-title">Asignación de las 15 Líneas (En Orden)</div>
         <div id="lista-lineas"></div>
 
-        <div class="section-title">Registro de Premios de la Ronda</div>
+        <div class="section-title">Registro de Premios (Escribe el N° de Línea)</div>
         <div class="premios-grid">
             <div class="premio-box">
-                <label>1era Línea</label>
-                <select id="ganadora_1" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+                <label>1era Línea (N°)</label>
+                <input type="number" id="num_ganadora_1" placeholder="Ej: 3" oninput="actualizarNombrePremio(1); guardarPremioTemporal(1)">
+                <div id="lbl_ganadora_1" class="premio-ganadora-label">--</div>
                 <input type="number" id="monto_1" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(1)">
             </div>
             <div class="premio-box">
-                <label>2da Línea</label>
-                <select id="ganadora_2" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+                <label>2da Línea (N°)</label>
+                <input type="number" id="num_ganadora_2" placeholder="Ej: 7" oninput="actualizarNombrePremio(2); guardarPremioTemporal(2)">
+                <div id="lbl_ganadora_2" class="premio-ganadora-label">--</div>
                 <input type="number" id="monto_2" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(2)">
             </div>
             <div class="premio-box">
-                <label>3era Línea</label>
-                <select id="ganadora_3" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+                <label>3era Línea (N°)</label>
+                <input type="number" id="num_ganadora_3" placeholder="Ej: 12" oninput="actualizarNombrePremio(3); guardarPremioTemporal(3)">
+                <div id="lbl_ganadora_3" class="premio-ganadora-label">--</div>
                 <input type="number" id="monto_3" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(3)">
             </div>
             <div class="premio-box">
-                <label>4ta Línea</label>
-                <select id="ganadora_4" class="select-ganadora"><option value="">-- Seleccionar --</option></select>
+                <label>4ta Línea (N°)</label>
+                <input type="number" id="num_ganadora_4" placeholder="Ej: 15" oninput="actualizarNombrePremio(4); guardarPremioTemporal(4)">
+                <div id="lbl_ganadora_4" class="premio-ganadora-label">--</div>
                 <input type="number" id="monto_4" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioTemporal(4)">
             </div>
         </div>
@@ -387,21 +402,24 @@
         <div class="section-title">Asignación de los 20 Objetos</div>
         <div id="lista-objetos"></div>
 
-        <div class="section-title">Registro de Premios (Objetos)</div>
+        <div class="section-title">Registro de Premios Objetos (Escribe N° del 1 al 20)</div>
         <div class="premios-grid">
             <div class="premio-box">
-                <label>1er Premio</label>
-                <select id="ganadora_obj_1" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
+                <label>1er Premio (Objeto N°)</label>
+                <input type="number" id="num_ganadora_obj_1" placeholder="Ej: 4" oninput="actualizarNombrePremioObj(1); guardarPremioObjTemporal(1)">
+                <div id="lbl_ganadora_obj_1" class="premio-ganadora-label">--</div>
                 <input type="number" id="monto_obj_1" placeholder="10000" style="margin-top:5px;" oninput="guardarPremioObjTemporal(1)">
             </div>
             <div class="premio-box">
-                <label>2do Premio</label>
-                <select id="ganadora_obj_2" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
+                <label>2do Premio (Objeto N°)</label>
+                <input type="number" id="num_ganadora_obj_2" placeholder="Ej: 8" oninput="actualizarNombrePremioObj(2); guardarPremioObjTemporal(2)">
+                <div id="lbl_ganadora_obj_2" class="premio-ganadora-label">--</div>
                 <input type="number" id="monto_obj_2" placeholder="5000" style="margin-top:5px;" oninput="guardarPremioObjTemporal(2)">
             </div>
             <div class="premio-box">
-                <label>3er Premio</label>
-                <select id="ganadora_obj_3" class="select-ganadora-obj"><option value="">-- Seleccionar --</option></select>
+                <label>3er Premio (Objeto N°)</label>
+                <input type="number" id="num_ganadora_obj_3" placeholder="Ej: 15" oninput="actualizarNombrePremioObj(3); guardarPremioObjTemporal(3)">
+                <div id="lbl_ganadora_obj_3" class="premio-ganadora-label">--</div>
                 <input type="number" id="monto_obj_3" placeholder="3000" style="margin-top:5px;" oninput="guardarPremioObjTemporal(3)">
             </div>
         </div>
@@ -423,21 +441,24 @@
         <div class="section-title">Asignación de los 10 Colores</div>
         <div id="lista-colores"></div>
 
-        <div class="section-title">Registro de Premios (Colores)</div>
+        <div class="section-title">Registro de Premios Colores (Escribe N° del 1 al 10)</div>
         <div class="premios-grid">
             <div class="premio-box">
-                <label>1er Premio</label>
-                <select id="ganadora_col_1" class="select-ganadora-col"><option value="">-- Seleccionar --</option></select>
+                <label>1er Premio (Color N°)</label>
+                <input type="number" id="num_ganadora_col_1" placeholder="Ej: 2" oninput="actualizarNombrePremioCol(1); guardarPremioColTemporal(1)">
+                <div id="lbl_ganadora_col_1" class="premio-ganadora-label">--</div>
                 <input type="number" id="monto_col_1" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioColTemporal(1)">
             </div>
             <div class="premio-box">
-                <label>2do Premio</label>
-                <select id="ganadora_col_2" class="select-ganadora-col"><option value="">-- Seleccionar --</option></select>
+                <label>2do Premio (Color N°)</label>
+                <input type="number" id="num_ganadora_col_2" placeholder="Ej: 5" oninput="actualizarNombrePremioCol(2); guardarPremioColTemporal(2)">
+                <div id="lbl_ganadora_col_2" class="premio-ganadora-label">--</div>
                 <input type="number" id="monto_col_2" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioColTemporal(2)">
             </div>
             <div class="premio-box" style="grid-column: span 2;">
-                <label>3er Premio</label>
-                <select id="ganadora_col_3" class="select-ganadora-col"><option value="">-- Seleccionar --</option></select>
+                <label>3er Premio (Color N°)</label>
+                <input type="number" id="num_ganadora_col_3" placeholder="Ej: 9" oninput="actualizarNombrePremioCol(3); guardarPremioColTemporal(3)">
+                <div id="lbl_ganadora_col_3" class="premio-ganadora-label">--</div>
                 <input type="number" id="monto_col_3" placeholder="Premio" style="margin-top:5px;" oninput="guardarPremioColTemporal(3)">
             </div>
         </div>
@@ -532,13 +553,13 @@
             secObjetos.style.display = 'block';
             localStorage.setItem('modo_activo_yune', 'objetos');
             renderizarObjetos();
-            actualizarSelectsPremiosObjetos();
+            actualizarNombresPremiosObjetosGuardados();
         } else if (modo === 'colores') {
             btnColores.className = 'btn-mode active-colores';
             secColores.style.display = 'block';
             localStorage.setItem('modo_activo_yune', 'colores');
             renderizarColores();
-            actualizarSelectsPremiosColores();
+            actualizarNombresPremiosColoresGuardados();
         }
     }
 
@@ -591,7 +612,7 @@
         contenedorFijas.innerHTML = html;
     }
 
-    // ================= FUNCIÓN LÍNEAS =================
+    // ================= RENDERIZAR LÍNEAS =================
     function renderizarLineas() {
         let contenedorLineas = document.getElementById('lista-lineas');
         contenedorLineas.innerHTML = '';
@@ -652,7 +673,7 @@
 
                 localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarLineas();
-                actualizarSelectsPremios();
+                actualizarNombresPremiosGuardados();
                 mostrarSaldos();
             });
 
@@ -694,7 +715,7 @@
         }
     }
 
-    // ================= FUNCIÓN OBJETOS =================
+    // ================= RENDERIZAR OBJETOS =================
     function renderizarObjetos() {
         let contenedorObjetos = document.getElementById('lista-objetos');
         contenedorObjetos.innerHTML = '';
@@ -758,7 +779,7 @@
 
                 localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarObjetos();
-                actualizarSelectsPremiosObjetos();
+                actualizarNombresPremiosObjGuardados();
                 mostrarSaldos();
             });
 
@@ -800,7 +821,7 @@
         }
     }
 
-    // ================= FUNCIÓN COLORES =================
+    // ================= RENDERIZAR COLORES =================
     function renderizarColores() {
         let contenedorColores = document.getElementById('lista-colores');
         contenedorColores.innerHTML = '';
@@ -864,7 +885,7 @@
 
                 localStorage.setItem('saldos_jugadoras', JSON.stringify(saldos));
                 renderizarColores();
-                actualizarSelectsPremiosColores();
+                actualizarNombresPremiosColGuardados();
                 mostrarSaldos();
             });
 
@@ -906,93 +927,88 @@
         }
     }
 
-    function obtenerJugadorasParticipantesRonda() {
-        let participantes = [];
-        for (let i = 1; i <= totalLineas; i++) {
-            let jugadora = localStorage.getItem('linea_ronda_' + i) || '';
-            if (jugadora !== "" && !participantes.includes(jugadora)) participantes.push(jugadora);
+    // ================= BUSCAR NOMBRE POR NÚMERO DE LÍNEA / OBJETO / COLOR =================
+    function actualizarNombrePremio(p) {
+        let numInput = document.getElementById('num_ganadora_' + p).value.trim();
+        let lbl = document.getElementById('lbl_ganadora_' + p);
+        if (numInput === "") { lbl.textContent = "--"; return; }
+        let idx = parseInt(numInput);
+        if (idx >= 1 && idx <= totalLineas) {
+            let jugadora = localStorage.getItem('linea_ronda_' + idx) || '';
+            lbl.textContent = jugadora !== "" ? "👤 " + jugadora : "⚠️ Vacía / Nadie";
+        } else {
+            lbl.textContent = "❌ N° inválido";
         }
-        participantes.sort();
-        return participantes;
     }
 
-    function obtenerJugadorasParticipantesObjetos() {
-        let participantes = [];
-        for (let i = 1; i <= totalObjetos; i++) {
-            let jugadora = localStorage.getItem('objeto_ronda_' + i) || '';
-            if (jugadora !== "" && !participantes.includes(jugadora)) participantes.push(jugadora);
+    function actualizarNombrePremioObj(p) {
+        let numInput = document.getElementById('num_ganadora_obj_' + p).value.trim();
+        let lbl = document.getElementById('lbl_ganadora_obj_' + p);
+        if (numInput === "") { lbl.textContent = "--"; return; }
+        let idx = parseInt(numInput);
+        if (idx >= 1 && idx <= totalObjetos) {
+            let jugadora = localStorage.getItem('objeto_ronda_' + idx) || '';
+            lbl.textContent = jugadora !== "" ? "👤 " + jugadora : "⚠️ Vacía / Nadie";
+        } else {
+            lbl.textContent = "❌ N° inválido";
         }
-        participantes.sort();
-        return participantes;
     }
 
-    function obtenerJugadorasParticipantesColores() {
-        let participantes = [];
-        for (let i = 1; i <= totalColores; i++) {
-            let jugadora = localStorage.getItem('color_ronda_' + i) || '';
-            if (jugadora !== "" && !participantes.includes(jugadora)) participantes.push(jugadora);
+    function actualizarNombrePremioCol(p) {
+        let numInput = document.getElementById('num_ganadora_col_' + p).value.trim();
+        let lbl = document.getElementById('lbl_ganadora_col_' + p);
+        if (numInput === "") { lbl.textContent = "--"; return; }
+        let idx = parseInt(numInput);
+        if (idx >= 1 && idx <= totalColores) {
+            let jugadora = localStorage.getItem('color_ronda_' + idx) || '';
+            lbl.textContent = jugadora !== "" ? "👤 " + jugadora : "⚠️ Vacía / Nadie";
+        } else {
+            lbl.textContent = "❌ N° inválido";
         }
-        participantes.sort();
-        return participantes;
     }
 
-    function actualizarSelectsPremios() {
-        let participantes = obtenerJugadorasParticipantesRonda();
+    function actualizarNombresPremiosGuardados() {
         for (let p = 1; p <= 4; p++) {
-            let sel = document.getElementById('ganadora_' + p);
-            let actual = sel.value;
-            sel.innerHTML = '<option value="">-- Seleccionar --</option>';
-            participantes.forEach(nombre => {
-                let opt = document.createElement('option');
-                opt.value = nombre;
-                opt.textContent = nombre;
-                if (nombre === actual) opt.selected = true;
-                sel.appendChild(opt);
-            });
-            let montoGuardado = localStorage.getItem('premio_monto_def_' + p);
-            if (montoGuardado && !document.getElementById('monto_' + p).value) document.getElementById('monto_' + p).value = montoGuardado;
+            let val = localStorage.getItem('premio_num_def_' + p) || '';
+            document.getElementById('num_ganadora_' + p).value = val;
+            actualizarNombrePremio(p);
+            let montoVal = localStorage.getItem('premio_monto_def_' + p) || '';
+            if (montoVal) document.getElementById('monto_' + p).value = montoVal;
         }
     }
 
-    function actualizarSelectsPremiosObjetos() {
-        let participantes = obtenerJugadorasParticipantesObjetos();
+    function actualizarNombresPremiosObjGuardados() {
         for (let p = 1; p <= 3; p++) {
-            let sel = document.getElementById('ganadora_obj_' + p);
-            let actual = sel.value;
-            sel.innerHTML = '<option value="">-- Seleccionar --</option>';
-            participantes.forEach(nombre => {
-                let opt = document.createElement('option');
-                opt.value = nombre;
-                opt.textContent = nombre;
-                if (nombre === actual) opt.selected = true;
-                sel.appendChild(opt);
-            });
-            let montoGuardado = localStorage.getItem('premio_monto_obj_def_' + p);
-            if (montoGuardado && !document.getElementById('monto_obj_' + p).value) document.getElementById('monto_obj_' + p).value = montoGuardado;
+            let val = localStorage.getItem('premio_num_obj_def_' + p) || '';
+            document.getElementById('num_ganadora_obj_' + p).value = val;
+            actualizarNombrePremioObj(p);
+            let montoVal = localStorage.getItem('premio_monto_obj_def_' + p) || '';
+            if (montoVal) document.getElementById('monto_obj_' + p).value = montoVal;
         }
     }
 
-    function actualizarSelectsPremiosColores() {
-        let participantes = obtenerJugadorasParticipantesColores();
+    function actualizarNombresPremiosColGuardados() {
         for (let p = 1; p <= 3; p++) {
-            let sel = document.getElementById('ganadora_col_' + p);
-            let actual = sel.value;
-            sel.innerHTML = '<option value="">-- Seleccionar --</option>';
-            participantes.forEach(nombre => {
-                let opt = document.createElement('option');
-                opt.value = nombre;
-                opt.textContent = nombre;
-                if (nombre === actual) opt.selected = true;
-                sel.appendChild(opt);
-            });
-            let montoGuardado = localStorage.getItem('premio_monto_col_def_' + p);
-            if (montoGuardado && !document.getElementById('monto_col_' + p).value) document.getElementById('monto_col_' + p).value = montoGuardado;
+            let val = localStorage.getItem('premio_num_col_def_' + p) || '';
+            document.getElementById('num_ganadora_col_' + p).value = val;
+            actualizarNombrePremioCol(p);
+            let montoVal = localStorage.getItem('premio_monto_col_def_' + p) || '';
+            if (montoVal) document.getElementById('monto_col_' + p).value = montoVal;
         }
     }
 
-    function guardarPremioTemporal(p) { localStorage.setItem('premio_monto_def_' + p, document.getElementById('monto_' + p).value); }
-    function guardarPremioObjTemporal(p) { localStorage.setItem('premio_monto_obj_def_' + p, document.getElementById('monto_obj_' + p).value); }
-    function guardarPremioColTemporal(p) { localStorage.setItem('premio_monto_col_def_' + p, document.getElementById('monto_col_' + p).value); }
+    function guardarPremioTemporal(p) {
+        localStorage.setItem('premio_num_def_' + p, document.getElementById('num_ganadora_' + p).value);
+        localStorage.setItem('premio_monto_def_' + p, document.getElementById('monto_' + p).value);
+    }
+    function guardarPremioObjTemporal(p) {
+        localStorage.setItem('premio_num_obj_def_' + p, document.getElementById('num_ganadora_obj_' + p).value);
+        localStorage.setItem('premio_monto_obj_def_' + p, document.getElementById('monto_obj_' + p).value);
+    }
+    function guardarPremioColTemporal(p) {
+        localStorage.setItem('premio_num_col_def_' + p, document.getElementById('num_ganadora_col_' + p).value);
+        localStorage.setItem('premio_monto_col_def_' + p, document.getElementById('monto_col_' + p).value);
+    }
 
     function actualizarTodo() {
         actualizarIndicadorRonda();
@@ -1003,14 +1019,14 @@
         renderizarLineas();
         renderizarObjetos();
         renderizarColores();
-        actualizarSelectsPremios();
-        actualizarSelectsPremiosObjetos();
-        actualizarSelectsPremiosColores();
+        actualizarNombresPremiosGuardados();
+        actualizarNombresPremiosObjGuardados();
+        actualizarNombresPremiosColGuardados();
         mostrarSaldos();
         mostrarHistorialRondas();
     }
 
-    // ================= COPIAR WHATSAPP (CON SÍMBOLOS ✔️ y ❌) =================
+    // ================= COPIAR WHATSAPP =================
     function copiarWhatsApp() {
         let rondaActual = obtenerRondaActual();
         let valorLinea = document.getElementById('valor_linea_config').value;
@@ -1139,6 +1155,7 @@
         }
     }
 
+    // ================= GUARDAR RONDA Y SUMAR PREMIOS =================
     function guardarRonda() {
         let saldos = JSON.parse(localStorage.getItem('saldos_jugadoras') || '{}');
         let historial = JSON.parse(localStorage.getItem('historial_rondas_lista') || '[]');
@@ -1147,13 +1164,20 @@
         let resumenRondaText = `Ronda ${rondaActual} (Líneas): `;
 
         for (let p = 1; p <= 4; p++) {
-            let nombre = document.getElementById('ganadora_' + p).value.trim();
+            let numInput = document.getElementById('num_ganadora_' + p).value.trim();
             let monto = parseFloat(document.getElementById('monto_' + p).value) || 0;
-            if (nombre !== "" && monto > 0) {
-                if (!saldos[nombre]) saldos[nombre] = 0;
-                saldos[nombre] += monto; 
-                registradas++;
-                resumenRondaText += `[${p}º: ${nombre} (+${monto})] `;
+            
+            if (numInput !== "" && monto > 0) {
+                let idx = parseInt(numInput);
+                if (idx >= 1 && idx <= totalLineas) {
+                    let nombre = localStorage.getItem('linea_ronda_' + idx) || '';
+                    if (nombre !== "") {
+                        if (!saldos[nombre]) saldos[nombre] = 0;
+                        saldos[nombre] += monto; 
+                        registradas++;
+                        resumenRondaText += `[Línea ${idx}: ${nombre} (+${monto})] `;
+                    }
+                }
             }
         }
 
@@ -1162,7 +1186,14 @@
             historial.push(resumenRondaText);
             localStorage.setItem('historial_rondas_lista', JSON.stringify(historial));
             
-            for (let p = 1; p <= 4; p++) document.getElementById('ganadora_' + p).value = '';
+            for (let p = 1; p <= 4; p++) {
+                localStorage.removeItem('premio_num_def_' + p);
+                localStorage.removeItem('premio_monto_def_' + p);
+                document.getElementById('num_ganadora_' + p).value = '';
+                document.getElementById('monto_' + p).value = '';
+                document.getElementById('lbl_ganadora_' + p).textContent = '--';
+            }
+
             for (let i = 1; i <= totalLineas; i++) {
                 localStorage.removeItem('linea_ronda_' + i);
                 localStorage.removeItem('estado_pago_linea_' + i);
@@ -1173,7 +1204,7 @@
             actualizarTodo();
             alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Líneas vaciadas.`);
         } else {
-            alert("Por favor selecciona al menos una ganadora y su monto.");
+            alert("Por favor introduce números de línea válidos y montos de premio.");
         }
     }
 
@@ -1185,13 +1216,20 @@
         let resumenRondaText = `Ronda ${rondaActual} (Objetos): `;
 
         for (let p = 1; p <= 3; p++) {
-            let nombre = document.getElementById('ganadora_obj_' + p).value.trim();
+            let numInput = document.getElementById('num_ganadora_obj_' + p).value.trim();
             let monto = parseFloat(document.getElementById('monto_obj_' + p).value) || 0;
-            if (nombre !== "" && monto > 0) {
-                if (!saldos[nombre]) saldos[nombre] = 0;
-                saldos[nombre] += monto; 
-                registradas++;
-                resumenRondaText += `[${p}º: ${nombre} (+${monto})] `;
+            
+            if (numInput !== "" && monto > 0) {
+                let idx = parseInt(numInput);
+                if (idx >= 1 && idx <= totalObjetos) {
+                    let nombre = localStorage.getItem('objeto_ronda_' + idx) || '';
+                    if (nombre !== "") {
+                        if (!saldos[nombre]) saldos[nombre] = 0;
+                        saldos[nombre] += monto; 
+                        registradas++;
+                        resumenRondaText += `[Obj ${idx}: ${nombre} (+${monto})] `;
+                    }
+                }
             }
         }
 
@@ -1200,7 +1238,14 @@
             historial.push(resumenRondaText);
             localStorage.setItem('historial_rondas_lista', JSON.stringify(historial));
             
-            for (let p = 1; p <= 3; p++) document.getElementById('ganadora_obj_' + p).value = '';
+            for (let p = 1; p <= 3; p++) {
+                localStorage.removeItem('premio_num_obj_def_' + p);
+                localStorage.removeItem('premio_monto_obj_def_' + p);
+                document.getElementById('num_ganadora_obj_' + p).value = '';
+                document.getElementById('monto_obj_' + p).value = '';
+                document.getElementById('lbl_ganadora_obj_' + p).textContent = '--';
+            }
+
             for (let i = 1; i <= totalObjetos; i++) {
                 localStorage.removeItem('objeto_ronda_' + i);
                 localStorage.removeItem('estado_pago_objeto_' + i);
@@ -1211,7 +1256,7 @@
             actualizarTodo();
             alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Objetos vaciados.`);
         } else {
-            alert("Por favor selecciona al menos un ganador y su monto en objetos.");
+            alert("Por favor introduce números de objeto válidos y montos.");
         }
     }
 
@@ -1223,13 +1268,20 @@
         let resumenRondaText = `Ronda ${rondaActual} (Colores): `;
 
         for (let p = 1; p <= 3; p++) {
-            let nombre = document.getElementById('ganadora_col_' + p).value.trim();
+            let numInput = document.getElementById('num_ganadora_col_' + p).value.trim();
             let monto = parseFloat(document.getElementById('monto_col_' + p).value) || 0;
-            if (nombre !== "" && monto > 0) {
-                if (!saldos[nombre]) saldos[nombre] = 0;
-                saldos[nombre] += monto; 
-                registradas++;
-                resumenRondaText += `[${p}º: ${nombre} (+${monto})] `;
+            
+            if (numInput !== "" && monto > 0) {
+                let idx = parseInt(numInput);
+                if (idx >= 1 && idx <= totalColores) {
+                    let nombre = localStorage.getItem('color_ronda_' + idx) || '';
+                    if (nombre !== "") {
+                        if (!saldos[nombre]) saldos[nombre] = 0;
+                        saldos[nombre] += monto; 
+                        registradas++;
+                        resumenRondaText += `[Color ${idx}: ${nombre} (+${monto})] `;
+                    }
+                }
             }
         }
 
@@ -1238,7 +1290,14 @@
             historial.push(resumenRondaText);
             localStorage.setItem('historial_rondas_lista', JSON.stringify(historial));
             
-            for (let p = 1; p <= 3; p++) document.getElementById('ganadora_col_' + p).value = '';
+            for (let p = 1; p <= 3; p++) {
+                localStorage.removeItem('premio_num_col_def_' + p);
+                localStorage.removeItem('premio_monto_col_def_' + p);
+                document.getElementById('num_ganadora_col_' + p).value = '';
+                document.getElementById('monto_col_' + p).value = '';
+                document.getElementById('lbl_ganadora_col_' + p).textContent = '--';
+            }
+
             for (let i = 1; i <= totalColores; i++) {
                 localStorage.removeItem('color_ronda_' + i);
                 localStorage.removeItem('estado_pago_color_' + i);
@@ -1249,7 +1308,7 @@
             actualizarTodo();
             alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Colores vaciados.`);
         } else {
-            alert("Por favor selecciona al menos un ganador y su monto en colores.");
+            alert("Por favor introduce números de color válidos y montos.");
         }
     }
 
@@ -1322,6 +1381,7 @@
         if (historial.length === 0) { divHistorial.innerHTML = "<em>Aún no hay rondas finalizadas.</em>"; return; }
         let html = "";
         historial.forEach((item, index) => { html += `<div>• <b>Ronda ${index + 1}:</b> ${item}</div>`; });
+        divHistorial.html = html;
         divHistorial.innerHTML = html;
     }
 
@@ -1336,8 +1396,11 @@
                 localStorage.removeItem('historial_rondas_lista');
                 localStorage.setItem('numero_ronda', '1');
                 for(let p=1; p<=4; p++) {
+                    localStorage.removeItem('premio_num_def_' + p);
                     localStorage.removeItem('premio_monto_def_' + p);
+                    localStorage.removeItem('premio_num_obj_def_' + p);
                     localStorage.removeItem('premio_monto_obj_def_' + p);
+                    localStorage.removeItem('premio_num_col_def_' + p);
                     localStorage.removeItem('premio_monto_col_def_' + p);
                 }
                 localStorage.removeItem('valor_linea_costo');
