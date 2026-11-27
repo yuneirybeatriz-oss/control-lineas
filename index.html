@@ -809,7 +809,7 @@
         btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
         btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
         
-        // Cambia solo el estado pagado/pendiente sin volver a restar el costo ya descontado al asignar
+        // Solo alterna la marca visual/de estado (pagado <-> pendiente) sin tocar el saldo
         btnPago.addEventListener('click', function() {
             if (bloqueandoAccion) return;
             let nombreJugadora = select.value;
