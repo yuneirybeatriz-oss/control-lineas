@@ -583,29 +583,41 @@
         try {
             const raw = window._dbRemota && window._dbRemota.saldos_jugadoras;
             if (!raw) return {};
-            return typeof raw === 'string' ? JSON.parse(raw) : raw;
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            const limpio = {};
+            Object.keys(parsed || {}).forEach(k => {
+                const n = parseFloat(parsed[k]);
+                limpio[k] = isNaN(n) ? 0 : n;
+            });
+            return limpio;
         } catch (e) {
             return {};
         }
     }
 
-    // Matemática exacta del código base:
-    // - Al quitar/devolver jugada: suma el costo (saldos[jugadora] += costo)
-    // - Al asignar jugada: resta el costo (saldos[jugadora] -= costo); queda 'pagado' si saldo >= 0, si no 'pendiente'
-    function devolverJugadaBase(saldos, jugadora, costo) {
-        if (jugadora !== "" && costo > 0) {
-            if (!saldos[jugadora]) saldos[jugadora] = 0;
-            saldos[jugadora] += costo;
-        }
-    }
-
-    function asignarJugadaBase(saldos, jugadora, costo) {
+    // Asignar = descuenta (-) | Quitar / poner en "-- Disponible --" = devuelve (+)
+    function descontarJugada(saldos, jugadora, costo) {
         if (jugadora !== "" && costo > 0) {
             if (!saldos[jugadora]) saldos[jugadora] = 0;
             saldos[jugadora] -= costo;
             return saldos[jugadora] >= 0 ? 'pagado' : 'pendiente';
         }
         return 'pendiente';
+    }
+
+    function devolverJugada(saldos, jugadora, costo) {
+        if (jugadora !== "" && costo > 0) {
+            if (!saldos[jugadora]) saldos[jugadora] = 0;
+            saldos[jugadora] += costo;
+        }
+    }
+
+    // Premio = suma directo (+) al saldo de la jugadora ganadora
+    function acreditarPremio(saldos, jugadora, monto) {
+        if (jugadora !== "" && monto > 0) {
+            if (!saldos[jugadora]) saldos[jugadora] = 0;
+            saldos[jugadora] += monto;
+        }
     }
 
     function obtenerTandaActual() {
@@ -777,14 +789,14 @@
             let saldos = obtenerSaldos();
             let updates = {};
 
-            devolverJugadaBase(saldos, anteriorJugadora, valorLinea);
+            devolverJugada(saldos, anteriorJugadora, valorLinea);
 
             if (nuevaJugadora === "") {
                 setLineaUpdates(updates, lineaNum, tandaNum, null, null);
             } else {
                 let nuevoEstado = estadoPago;
                 if (valorLinea > 0) {
-                    nuevoEstado = asignarJugadaBase(saldos, nuevaJugadora, valorLinea);
+                    nuevoEstado = descontarJugada(saldos, nuevaJugadora, valorLinea);
                 }
                 setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, nuevoEstado);
             }
@@ -920,7 +932,7 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                devolverJugadaBase(saldos, anteriorJugadora, valorObjeto);
+                devolverJugada(saldos, anteriorJugadora, valorObjeto);
 
                 if (nuevaJugadora === "") {
                     updates['objeto_ronda_' + i] = null;
@@ -928,7 +940,7 @@
                 } else {
                     let nuevoEstado = estadoPago;
                     if (valorObjeto > 0) {
-                        nuevoEstado = asignarJugadaBase(saldos, nuevaJugadora, valorObjeto);
+                        nuevoEstado = descontarJugada(saldos, nuevaJugadora, valorObjeto);
                     }
                     updates['objeto_ronda_' + i] = nuevaJugadora;
                     updates['estado_pago_objeto_' + i] = nuevoEstado;
@@ -1022,7 +1034,7 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                devolverJugadaBase(saldos, anteriorJugadora, valorColor);
+                devolverJugada(saldos, anteriorJugadora, valorColor);
 
                 if (nuevaJugadora === "") {
                     updates['color_ronda_' + i] = null;
@@ -1030,7 +1042,7 @@
                 } else {
                     let nuevoEstado = estadoPago;
                     if (valorColor > 0) {
-                        nuevoEstado = asignarJugadaBase(saldos, nuevaJugadora, valorColor);
+                        nuevoEstado = descontarJugada(saldos, nuevaJugadora, valorColor);
                     }
                     updates['color_ronda_' + i] = nuevaJugadora;
                     updates['estado_pago_color_' + i] = nuevoEstado;
@@ -1300,7 +1312,7 @@
             for (let i = 1; i <= totalLineas; i++) {
                 for (let t = 1; t <= maxTandasLineas; t++) {
                     let jug = obtenerJugadoraLinea(i, t);
-                    devolverJugadaBase(saldos, jug, valorLinea);
+                    devolverJugada(saldos, jug, valorLinea);
                     setLineaUpdates(updates, i, t, null, null);
                 }
             }
@@ -1317,7 +1329,7 @@
 
             for (let i = 1; i <= totalObjetos; i++) {
                 let jug = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
-                devolverJugadaBase(saldos, jug, valorObjeto);
+                devolverJugada(saldos, jug, valorObjeto);
                 updates['objeto_ronda_' + i] = null;
                 updates['estado_pago_objeto_' + i] = null;
             }
@@ -1334,7 +1346,7 @@
 
             for (let i = 1; i <= totalColores; i++) {
                 let jug = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
-                devolverJugadaBase(saldos, jug, valorColor);
+                devolverJugada(saldos, jug, valorColor);
                 updates['color_ronda_' + i] = null;
                 updates['estado_pago_color_' + i] = null;
             }
@@ -1362,8 +1374,7 @@
                     let jugadas = obtenerJugadasDeLineaEnRonda(idx);
                     if (jugadas.length > 0) {
                         jugadas.forEach(nombre => {
-                            if (!saldos[nombre]) saldos[nombre] = 0;
-                            saldos[nombre] += monto;
+                            acreditarPremio(saldos, nombre, monto);
                             registradas++;
                             resumenRondaText += `[Línea ${idx}: ${nombre} (+${monto})] `;
                         });
@@ -1393,7 +1404,7 @@
             let nuevaRonda = rondaActual + 1;
             updates['numero_ronda'] = nuevaRonda;
             guardarLoteFirebase(updates);
-            alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Líneas vaciadas y montos de premios intactos.`);
+            alert(`¡Ronda ${rondaActual} guardada! Premios sumados al saldo y pasando a la Ronda ${nuevaRonda}.`);
         } else {
             alert("Por favor introduce números de línea válidos y montos de premio.");
         }
@@ -1416,8 +1427,7 @@
                 if (idx >= 1 && idx <= totalObjetos) {
                     let nombre = (window._dbRemota && window._dbRemota['objeto_ronda_' + idx]) || '';
                     if (nombre !== "") {
-                        if (!saldos[nombre]) saldos[nombre] = 0;
-                        saldos[nombre] += monto; 
+                        acreditarPremio(saldos, nombre, monto);
                         registradas++;
                         resumenRondaText += `[Obj ${idx}: ${nombre} (+${monto})] `;
                     }
@@ -1444,7 +1454,7 @@
             let nuevaRonda = rondaActual + 1;
             updates['numero_ronda'] = nuevaRonda;
             guardarLoteFirebase(updates);
-            alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Objetos vaciados y montos intactos.`);
+            alert(`¡Ronda ${rondaActual} guardada! Premios sumados al saldo y pasando a la Ronda ${nuevaRonda}.`);
         } else {
             alert("Por favor introduce números de objeto válidos y montos.");
         }
@@ -1467,8 +1477,7 @@
                 if (idx >= 1 && idx <= totalColores) {
                     let nombre = (window._dbRemota && window._dbRemota['color_ronda_' + idx]) || '';
                     if (nombre !== "") {
-                        if (!saldos[nombre]) saldos[nombre] = 0;
-                        saldos[nombre] += monto; 
+                        acreditarPremio(saldos, nombre, monto);
                         registradas++;
                         resumenRondaText += `[Color ${idx}: ${nombre} (+${monto})] `;
                     }
@@ -1495,7 +1504,7 @@
             let nuevaRonda = rondaActual + 1;
             updates['numero_ronda'] = nuevaRonda;
             guardarLoteFirebase(updates);
-            alert(`¡Ronda ${rondaActual} guardada! Pasando a la Ronda ${nuevaRonda}. Colores vaciados y montos intactos.`);
+            alert(`¡Ronda ${rondaActual} guardada! Premios sumados al saldo y pasando a la Ronda ${nuevaRonda}.`);
         } else {
             alert("Por favor introduce números de color válidos y montos.");
         }
@@ -1544,7 +1553,7 @@
 
         let html = "";
         keys.forEach(nombre => {
-            let valor = saldos[nombre];
+            let valor = parseFloat(saldos[nombre]) || 0;
             let colorEstilo = valor < 0 ? 'color: #ff4757; font-weight: bold;' : 'color: #2ed573; font-weight: bold;';
             let textoValor = valor >= 0 ? '+' + valor : valor;
             let btnCopiar = valor > 0 ? `<button class="btn-copiar-privado" onclick="copiarSaldoPrivado(${valor})">📲 Copiar</button>` : "";
