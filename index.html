@@ -522,7 +522,7 @@
 
     <!-- ZONA DE PELIGRO -->
     <div class="danger-zone">
-        <button class="btn-reset-day" onclick="reiniciarDia()">⚠️ Reiniciar Día (Borrar Todo y Saldos)</button>
+        <button class="btn-reset-day" onclick="reiniciarDia()">⚠️ Reiniciar Día (Conserva Jugadoras Fijas)</button>
     </div>
 </div>
 
@@ -604,9 +604,6 @@
         }
     }
 
-    // Revertir jugada anterior según cómo se cobró originalmente:
-    // - Si quedó marcada como 'pagado' por saldo a favor: devuelve `+costo` al saldo.
-    // - Si quedó como 'pendiente': resta `-costo` del saldo.
     function revertirJugadaAnterior(saldos, jugadora, estadoAnterior, costo) {
         if (!jugadora || !costo || costo <= 0) return;
         let saldoActual = saldos[jugadora] || 0;
@@ -1569,13 +1566,51 @@
         divHistorial.innerHTML = html;
     }
 
+    // Reinicia saldos, jugadas, premios temporales, historial y ronda (1),
+    // pero CONSERVA jugadoras_fijas y los costos configurados.
     function reiniciarDia() {
-        if (confirm("⚠️ ¿Reiniciar el día? Se borrarán todos los saldos, líneas, objetos, colores, historial y la ronda volverá a 1.")) {
+        if (confirm("⚠️ ¿Reiniciar el día? Se borrarán saldos, jugadas, premios e historial y volverá a Ronda 1, pero se conservarán tus jugadoras fijas.")) {
             let confirmacion2 = prompt("Escribe la palabra 'BORRAR' para confirmar:");
             if (confirmacion2 && confirmacion2.toUpperCase() === "BORRAR") {
-                dbRef.remove().then(() => {
-                    alert("¡Día reiniciado con éxito!");
-                    location.reload();
+                let updates = {
+                    numero_ronda: 1,
+                    tanda_lineas: 1,
+                    saldos_jugadoras: null,
+                    historial_rondas_lista: null
+                };
+
+                for (let i = 1; i <= totalLineas; i++) {
+                    updates['linea_ronda_' + i] = null;
+                    updates['estado_pago_linea_' + i] = null;
+                    for (let t = 1; t <= maxTandasLineas; t++) {
+                        updates['linea_ronda_' + i + '_t' + t] = null;
+                        updates['estado_pago_linea_' + i + '_t' + t] = null;
+                    }
+                }
+
+                for (let i = 1; i <= totalObjetos; i++) {
+                    updates['objeto_ronda_' + i] = null;
+                    updates['estado_pago_objeto_' + i] = null;
+                }
+
+                for (let i = 1; i <= totalColores; i++) {
+                    updates['color_ronda_' + i] = null;
+                    updates['estado_pago_color_' + i] = null;
+                }
+
+                for (let p = 1; p <= 4; p++) {
+                    updates['premio_num_def_' + p] = null;
+                    updates['premio_monto_def_' + p] = null;
+                }
+                for (let p = 1; p <= 3; p++) {
+                    updates['premio_num_obj_def_' + p] = null;
+                    updates['premio_monto_obj_def_' + p] = null;
+                    updates['premio_num_col_def_' + p] = null;
+                    updates['premio_monto_col_def_' + p] = null;
+                }
+
+                dbRef.update(updates).then(() => {
+                    alert("¡Día reiniciado! Tus jugadoras fijas siguen guardadas.");
                 });
             }
         }
