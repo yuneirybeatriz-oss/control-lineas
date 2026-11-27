@@ -382,7 +382,7 @@
     <div id="seccion-lineas">
         <div class="config-box">
             <label>Costo de cada Línea:</label>
-            <input type="number" id="valor_linea_config" placeholder="Ej: 3000" oninput="guardarValorLinea()">
+            <input type="number" id="valor_linea_config" placeholder="Ej: 1000" oninput="guardarValorLinea()">
         </div>
 
         <!-- SELECTOR NORMAL / DOBLE / TRIPLE -->
@@ -473,7 +473,7 @@
     <div id="seccion-colores" style="display: none;">
         <div class="config-box">
             <label>Costo de cada Color:</label>
-            <input type="number" id="valor_color_config" placeholder="Ej: 500" oninput="guardarValorColor()">
+            <input type="number" id="valor_color_config" placeholder="Ej: 1000" oninput="guardarValorColor()">
         </div>
 
         <div class="actions-top" style="margin-top: 15px;">
@@ -589,31 +589,51 @@
         }
     }
 
-    // Al asignar: siempre descuenta el costo; si tenía saldo positivo (> 0), queda pagado directo.
-    function asignarJugadaRestando(saldos, jugadora, costo) {
+    // 1. Al asignar: resta el costo. Si tenía saldo positivo (> 0), queda pagado (✔️);
+    // si no tenía positivo, queda negativo y pendiente (↻).
+    function asignarJugada(saldos, jugadora, costo) {
         if (!jugadora) return 'pendiente';
-        let saldoActual = Number(saldos[jugadora] || 0);
         let costoNum = Math.abs(Number(costo || 0));
+        let saldoAnterior = Number(saldos[jugadora] || 0);
         if (costoNum > 0) {
-            saldos[jugadora] = saldoActual - costoNum;
-            if (saldoActual > 0) {
+            saldos[jugadora] = saldoAnterior - costoNum;
+            if (saldoAnterior > 0) {
                 return 'pagado';
             }
         }
         return 'pendiente';
     }
 
-    // Al quitar de la línea o vaciar: devuelve lo que se había descontado
-    function revertirAsignacion(saldos, jugadora, estadoAnterior, costo) {
+    // 2. Al quitar ("-- Disponible --" o vaciar): revierte exactamente la jugada
+    // para que el saldo no se descuadre (si estaba pendiente suma +costo; si estaba pagada resta -costo).
+    function quitarJugada(saldos, jugadora, estadoAnterior, costo) {
         let costoNum = Math.abs(Number(costo || 0));
         if (!jugadora || !costoNum) return;
         let saldoActual = Number(saldos[jugadora] || 0);
-        saldos[jugadora] = saldoActual + costoNum;
+        if (estadoAnterior === 'pagado') {
+            saldos[jugadora] = saldoActual - costoNum;
+        } else {
+            saldos[jugadora] = saldoActual + costoNum;
+        }
     }
 
-    // Al pulsar el botón de pago: alterna entre 'pagado' y 'pendiente' sin sumar al saldo.
-    function alternarPagoJugada(saldos, jugadora, estadoActual, costo) {
-        return estadoActual === 'pendiente' ? 'pagado' : 'pendiente';
+    // 3. Al pulsar botón de pago:
+    // - Si estaba pendiente (↻) -> suma el costo (ej. -1000 + 1000 = 0) y pasa a pagado (✔️).
+    // - Si estaba pagado (✔️) -> resta el costo (ej. 0 - 1000 = -1000) y pasa a pendiente (↻).
+    function alternarPago(saldos, jugadora, estadoActual, costo) {
+        let costoNum = Math.abs(Number(costo || 0));
+        let saldoActual = Number(saldos[jugadora] || 0);
+        if (estadoActual === 'pendiente') {
+            if (costoNum > 0) {
+                saldos[jugadora] = saldoActual + costoNum;
+            }
+            return 'pagado';
+        } else {
+            if (costoNum > 0) {
+                saldos[jugadora] = saldoActual - costoNum;
+            }
+            return 'pendiente';
+        }
     }
 
     function obtenerTandaActual() {
@@ -785,13 +805,13 @@
             let updates = {};
 
             if (guardado && guardado !== "") {
-                revertirAsignacion(saldos, guardado, estadoPago, valorLinea);
+                quitarJugada(saldos, guardado, estadoPago, valorLinea);
             }
 
             if (nuevaJugadora === "") {
                 setLineaUpdates(updates, lineaNum, tandaNum, null, null);
             } else {
-                let nuevoEstado = asignarJugadaRestando(saldos, nuevaJugadora, valorLinea);
+                let nuevoEstado = asignarJugada(saldos, nuevaJugadora, valorLinea);
                 setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, nuevoEstado);
             }
 
@@ -813,7 +833,7 @@
             let saldos = obtenerSaldos();
             let updates = {};
 
-            let nuevoEstado = alternarPagoJugada(saldos, nombreJugadora, estadoActual, valorLinea);
+            let nuevoEstado = alternarPago(saldos, nombreJugadora, estadoActual, valorLinea);
             setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, nuevoEstado);
 
             updates['saldos_jugadoras'] = JSON.stringify(saldos);
@@ -915,14 +935,14 @@
                 let updates = {};
 
                 if (guardado && guardado !== "") {
-                    revertirAsignacion(saldos, guardado, estadoPago, valorObjeto);
+                    quitarJugada(saldos, guardado, estadoPago, valorObjeto);
                 }
 
                 if (nuevaJugadora === "") {
                     updates['objeto_ronda_' + i] = null;
                     updates['estado_pago_objeto_' + i] = null;
                 } else {
-                    let nuevoEstado = asignarJugadaRestando(saldos, nuevaJugadora, valorObjeto);
+                    let nuevoEstado = asignarJugada(saldos, nuevaJugadora, valorObjeto);
                     updates['objeto_ronda_' + i] = nuevaJugadora;
                     updates['estado_pago_objeto_' + i] = nuevoEstado;
                 }
@@ -945,7 +965,7 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                let nuevoEstado = alternarPagoJugada(saldos, nombreJugadora, estadoActual, valorObjeto);
+                let nuevoEstado = alternarPago(saldos, nombreJugadora, estadoActual, valorObjeto);
                 updates['estado_pago_objeto_' + i] = nuevoEstado;
 
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
@@ -1004,14 +1024,14 @@
                 let updates = {};
 
                 if (guardado && guardado !== "") {
-                    revertirAsignacion(saldos, guardado, estadoPago, valorColor);
+                    quitarJugada(saldos, guardado, estadoPago, valorColor);
                 }
 
                 if (nuevaJugadora === "") {
                     updates['color_ronda_' + i] = null;
                     updates['estado_pago_color_' + i] = null;
                 } else {
-                    let nuevoEstado = asignarJugadaRestando(saldos, nuevaJugadora, valorColor);
+                    let nuevoEstado = asignarJugada(saldos, nuevaJugadora, valorColor);
                     updates['color_ronda_' + i] = nuevaJugadora;
                     updates['estado_pago_color_' + i] = nuevoEstado;
                 }
@@ -1034,7 +1054,7 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                let nuevoEstado = alternarPagoJugada(saldos, nombreJugadora, estadoActual, valorColor);
+                let nuevoEstado = alternarPago(saldos, nombreJugadora, estadoActual, valorColor);
                 updates['estado_pago_color_' + i] = nuevoEstado;
 
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
@@ -1271,7 +1291,7 @@
                     let jug = obtenerJugadoraLinea(i, t);
                     let est = obtenerEstadoPagoLinea(i, t);
                     if (jug && jug !== "") {
-                        revertirAsignacion(saldos, jug, est, valorLinea);
+                        quitarJugada(saldos, jug, est, valorLinea);
                     }
                     setLineaUpdates(updates, i, t, null, null);
                 }
@@ -1291,7 +1311,7 @@
                 let jug = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
                 let est = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
                 if (jug && jug !== "") {
-                    revertirAsignacion(saldos, jug, est, valorObjeto);
+                    quitarJugada(saldos, jug, est, valorObjeto);
                 }
                 updates['objeto_ronda_' + i] = null;
                 updates['estado_pago_objeto_' + i] = null;
@@ -1311,7 +1331,7 @@
                 let jug = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
                 let est = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
                 if (jug && jug !== "") {
-                    revertirAsignacion(saldos, jug, est, valorColor);
+                    quitarJugada(saldos, jug, est, valorColor);
                 }
                 updates['color_ronda_' + i] = null;
                 updates['estado_pago_color_' + i] = null;
