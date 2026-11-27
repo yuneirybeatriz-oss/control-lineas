@@ -541,7 +541,6 @@
     const totalObjetos = 20;
     const totalColores = 10;
     const maxTandasLineas = 3; // Normal (1), Doble (2), Triple (3)
-    let bloqueandoAccion = false;
     
     const listaObjetosNombres = [
         "1 🪜 La Escalera", "2 💍 El Anillo", "3 🔑 La Llave", "4 ⭐ La Estrella",
@@ -564,7 +563,6 @@
         } else {
             window._dbRemota = {};
         }
-        bloqueandoAccion = false;
         actualizarTodoLocal();
     });
 
@@ -573,10 +571,7 @@
     }
 
     function guardarLoteFirebase(updates) {
-        bloqueandoAccion = true;
-        dbRef.update(updates, () => {
-            bloqueandoAccion = false;
-        });
+        dbRef.update(updates);
     }
 
     function obtenerSaldos() {
@@ -782,7 +777,6 @@
         });
 
         select.addEventListener('change', function() {
-            if (bloqueandoAccion) return;
             let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
             let anteriorJugadora = guardado;
             let nuevaJugadora = select.value;
@@ -811,7 +805,6 @@
         
         // Solo alterna la marca visual/de estado (pagado <-> pendiente) sin tocar el saldo
         btnPago.addEventListener('click', function() {
-            if (bloqueandoAccion) return;
             let nombreJugadora = select.value;
             if (nombreJugadora === "") { alert("Selecciona una jugadora en esta línea primero."); return; }
 
@@ -910,7 +903,6 @@
             });
 
             select.addEventListener('change', function() {
-                if (bloqueandoAccion) return;
                 let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
                 let anteriorJugadora = guardado;
                 let nuevaJugadora = select.value;
@@ -940,7 +932,6 @@
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
             
             btnPago.addEventListener('click', function() {
-                if (bloqueandoAccion) return;
                 let nombreJugadora = select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este objeto primero."); return; }
 
@@ -994,7 +985,6 @@
             });
 
             select.addEventListener('change', function() {
-                if (bloqueandoAccion) return;
                 let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
                 let anteriorJugadora = guardado;
                 let nuevaJugadora = select.value;
@@ -1024,7 +1014,6 @@
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
             
             btnPago.addEventListener('click', function() {
-                if (bloqueandoAccion) return;
                 let nombreJugadora = select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este color primero."); return; }
 
