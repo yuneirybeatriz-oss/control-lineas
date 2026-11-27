@@ -609,6 +609,16 @@
         }
     }
 
+    // Asigna una jugada:
+    // - Si la jugadora ya tenía saldo positivo (> 0), se cobra de su saldo a favor y se marca como 'pagado'.
+    // - Si tenía 0 o saldo negativo, descuenta el costo y queda como 'pendiente'.
+    function asignarJugadaConSaldo(saldos, jugadora, costo) {
+        if (jugadora === "" || costo <= 0) return 'pendiente';
+        const saldoPrevio = typeof saldos[jugadora] === 'number' && !isNaN(saldos[jugadora]) ? saldos[jugadora] : 0;
+        saldos[jugadora] = saldoPrevio - costo;
+        return saldoPrevio > 0 ? 'pagado' : 'pendiente';
+    }
+
     function descontarJugada(saldos, jugadora, costo) {
         if (jugadora !== "" && costo > 0) {
             const actual = typeof saldos[jugadora] === 'number' && !isNaN(saldos[jugadora]) ? saldos[jugadora] : 0;
@@ -851,8 +861,8 @@
                 if (nuevaJugadora === "") {
                     setLineaUpdates(updates, lineaNum, tandaNum, null, null);
                 } else {
-                    descontarJugada(saldos, nuevaJugadora, valorLinea);
-                    setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, 'pendiente');
+                    let estadoAsignado = asignarJugadaConSaldo(saldos, nuevaJugadora, valorLinea);
+                    setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, estadoAsignado);
                 }
 
                 select.dataset.prevJugador = nuevaJugadora;
@@ -1006,9 +1016,9 @@
                         updates['objeto_ronda_' + i] = null;
                         updates['estado_pago_objeto_' + i] = null;
                     } else {
-                        descontarJugada(saldos, nuevaJugadora, valorObjeto);
+                        let estadoAsignado = asignarJugadaConSaldo(saldos, nuevaJugadora, valorObjeto);
                         updates['objeto_ronda_' + i] = nuevaJugadora;
-                        updates['estado_pago_objeto_' + i] = 'pendiente';
+                        updates['estado_pago_objeto_' + i] = estadoAsignado;
                     }
 
                     select.dataset.prevJugador = nuevaJugadora;
@@ -1119,9 +1129,9 @@
                         updates['color_ronda_' + i] = null;
                         updates['estado_pago_color_' + i] = null;
                     } else {
-                        descontarJugada(saldos, nuevaJugadora, valorColor);
+                        let estadoAsignado = asignarJugadaConSaldo(saldos, nuevaJugadora, valorColor);
                         updates['color_ronda_' + i] = nuevaJugadora;
-                        updates['estado_pago_color_' + i] = 'pendiente';
+                        updates['estado_pago_color_' + i] = estadoAsignado;
                     }
 
                     select.dataset.prevJugador = nuevaJugadora;
