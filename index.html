@@ -589,10 +589,7 @@
         }
     }
 
-    // Al asignar:
-    // - Siempre descuenta el costo (saldoActual - costoNum).
-    // - Si tenía saldo positivo (saldoActual > 0) y costoNum > 0: queda 'pagado' directo (verde ✔️ y ✔️ en WhatsApp).
-    // - Si no tenía saldo positivo: queda 'pendiente' (↻ y ❌ en WhatsApp).
+    // Al asignar: siempre descuenta el costo; si tenía saldo positivo (> 0), queda pagado directo.
     function asignarJugadaRestando(saldos, jugadora, costo) {
         if (!jugadora) return 'pendiente';
         let saldoActual = Number(saldos[jugadora] || 0);
@@ -614,20 +611,9 @@
         saldos[jugadora] = saldoActual + costoNum;
     }
 
-    // Al pulsar el botón de pago:
-    // - Si estaba 'pendiente' -> pasa a 'pagado' sin volver a sumar (ya que al asignar desde saldo <= 0 se descontó; al marcar pagado se cierra el cobro).
-    // - Si estaba 'pagado' -> pasa a 'pendiente' y devuelve el costo al saldo.
+    // Al pulsar el botón de pago: alterna entre 'pagado' y 'pendiente' sin sumar al saldo.
     function alternarPagoJugada(saldos, jugadora, estadoActual, costo) {
-        let costoNum = Math.abs(Number(costo || 0));
-        let saldoActual = Number(saldos[jugadora] || 0);
-        if (estadoActual === 'pendiente') {
-            return 'pagado';
-        } else {
-            if (costoNum > 0) {
-                saldos[jugadora] = saldoActual + costoNum;
-            }
-            return 'pendiente';
-        }
+        return estadoActual === 'pendiente' ? 'pagado' : 'pendiente';
     }
 
     function obtenerTandaActual() {
