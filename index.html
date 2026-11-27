@@ -1188,14 +1188,8 @@
                     let iconoFinal = todosPagados ? '✔️' : '❌';
                     texto += `${i} - *${entradas[0].nombre}* (${etiquetaRep}) ${iconoFinal}\n`;
                 } else {
-                    let partes = entradas.map(e => {
-                        if (tandaActual > 1) {
-                            let orden = e.tanda === 1 ? '1ra' : (e.tanda === 2 ? '2da' : '3ra');
-                            return `${orden}: *${e.nombre}* ${e.icono}`;
-                        }
-                        return `*${e.nombre}* ${e.icono}`;
-                    });
-                    texto += `${i} - ${partes.join(' | ')}\n`;
+                    let partes = entradas.map(e => `*${e.nombre}* ${e.icono}`);
+                    texto += `${i} - ${partes.join(' / ')}\n`;
                 }
             } else {
                 texto += `${i} - _Disponible_\n`;
