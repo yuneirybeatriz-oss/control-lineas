@@ -585,26 +585,36 @@
             : {};
     }
 
-    // Regla directa:
-    // - Asignar jugada (pendiente): +costo
-    // - Alternar pagado <-> pendiente: resta/suma 1 vez el costo
-    // - Quitar jugada: revierte el estado actual de esa jugada
-    function alAsignarJugada(saldos, jugadora, costo) {
-        if (!jugadora || !costo) return;
-        if (!saldos[jugadora]) saldos[jugadora] = 0;
-        saldos[jugadora] += costo;
+    // Regla automática al asignar:
+    // - Si tiene saldo positivo (saldoActual > 0): descuenta `costo` de su saldo y marca la jugada como 'pagado' (verde ✔️).
+    // - Si no tiene saldo positivo (saldoActual <= 0): suma `costo` a su saldo y deja la jugada como 'pendiente'.
+    function aplicarAsignacionAutomatica(saldos, jugadora, costo) {
+        if (!jugadora) return 'pendiente';
+        let saldoActual = saldos[jugadora] || 0;
+        if (!costo || costo <= 0) {
+            saldos[jugadora] = saldoActual;
+            return 'pendiente';
+        }
+        if (saldoActual > 0) {
+            saldos[jugadora] = saldoActual - costo;
+            return 'pagado';
+        } else {
+            saldos[jugadora] = saldoActual + costo;
+            return 'pendiente';
+        }
     }
 
-    function alQuitarJugada(saldos, jugadora, estadoActual, costo) {
-        if (!jugadora || !costo) return;
-        if (!saldos[jugadora]) saldos[jugadora] = 0;
-        saldos[jugadora] += (estadoActual === 'pagado') ? costo : -costo;
-    }
-
-    function alAlternarPago(saldos, jugadora, estadoActual, costo) {
-        if (!jugadora || !costo) return;
-        if (!saldos[jugadora]) saldos[jugadora] = 0;
-        saldos[jugadora] += (estadoActual === 'pendiente') ? -costo : costo;
+    // Revertir jugada anterior según cómo se cobró originalmente:
+    // - Si quedó marcada como 'pagado' por saldo a favor: devuelve `+costo` al saldo.
+    // - Si quedó como 'pendiente': resta `-costo` del saldo.
+    function revertirJugadaAnterior(saldos, jugadora, estadoAnterior, costo) {
+        if (!jugadora || !costo || costo <= 0) return;
+        let saldoActual = saldos[jugadora] || 0;
+        if (estadoAnterior === 'pagado') {
+            saldos[jugadora] = saldoActual + costo;
+        } else {
+            saldos[jugadora] = saldoActual - costo;
+        }
     }
 
     function obtenerTandaActual() {
@@ -776,14 +786,14 @@
             let updates = {};
 
             if (guardado && guardado !== "") {
-                alQuitarJugada(saldos, guardado, estadoPago, valorLinea);
+                revertirJugadaAnterior(saldos, guardado, estadoPago, valorLinea);
             }
 
             if (nuevaJugadora === "") {
                 setLineaUpdates(updates, lineaNum, tandaNum, null, null);
             } else {
-                alAsignarJugada(saldos, nuevaJugadora, valorLinea);
-                setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, 'pendiente');
+                let nuevoEstado = aplicarAsignacionAutomatica(saldos, nuevaJugadora, valorLinea);
+                setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, nuevoEstado);
             }
 
             updates['saldos_jugadoras'] = JSON.stringify(saldos);
@@ -800,12 +810,22 @@
             if (!nombreJugadora) { alert("Selecciona una jugadora en esta línea primero."); return; }
 
             let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
-            let nuevoEstado = (estadoPago === 'pendiente') ? 'pagado' : 'pendiente';
+            let estadoActual = obtenerEstadoPagoLinea(lineaNum, tandaNum);
             let saldos = obtenerSaldos();
             let updates = {};
 
-            alAlternarPago(saldos, nombreJugadora, estadoPago, valorLinea);
-            setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, nuevoEstado);
+            if (estadoActual === 'pendiente') {
+                if (valorLinea > 0) {
+                    saldos[nombreJugadora] = (saldos[nombreJugadora] || 0) - valorLinea;
+                }
+                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pagado');
+            } else {
+                if (valorLinea > 0) {
+                    saldos[nombreJugadora] = (saldos[nombreJugadora] || 0) + valorLinea;
+                }
+                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pendiente');
+            }
+
             updates['saldos_jugadoras'] = JSON.stringify(saldos);
             guardarLoteFirebase(updates);
         });
@@ -905,16 +925,16 @@
                 let updates = {};
 
                 if (guardado && guardado !== "") {
-                    alQuitarJugada(saldos, guardado, estadoPago, valorObjeto);
+                    revertirJugadaAnterior(saldos, guardado, estadoPago, valorObjeto);
                 }
 
                 if (nuevaJugadora === "") {
                     updates['objeto_ronda_' + i] = null;
                     updates['estado_pago_objeto_' + i] = null;
                 } else {
-                    alAsignarJugada(saldos, nuevaJugadora, valorObjeto);
+                    let nuevoEstado = aplicarAsignacionAutomatica(saldos, nuevaJugadora, valorObjeto);
                     updates['objeto_ronda_' + i] = nuevaJugadora;
-                    updates['estado_pago_objeto_' + i] = 'pendiente';
+                    updates['estado_pago_objeto_' + i] = nuevoEstado;
                 }
 
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
@@ -931,12 +951,18 @@
                 if (!nombreJugadora) { alert("Selecciona una jugadora en este objeto primero."); return; }
 
                 let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
-                let nuevoEstado = (estadoPago === 'pendiente') ? 'pagado' : 'pendiente';
+                let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                alAlternarPago(saldos, nombreJugadora, estadoPago, valorObjeto);
-                updates['estado_pago_objeto_' + i] = nuevoEstado;
+                if (estadoActual === 'pendiente') {
+                    if (valorObjeto > 0) saldos[nombreJugadora] = (saldos[nombreJugadora] || 0) - valorObjeto;
+                    updates['estado_pago_objeto_' + i] = 'pagado';
+                } else {
+                    if (valorObjeto > 0) saldos[nombreJugadora] = (saldos[nombreJugadora] || 0) + valorObjeto;
+                    updates['estado_pago_objeto_' + i] = 'pendiente';
+                }
+
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
                 guardarLoteFirebase(updates);
             });
@@ -993,16 +1019,16 @@
                 let updates = {};
 
                 if (guardado && guardado !== "") {
-                    alQuitarJugada(saldos, guardado, estadoPago, valorColor);
+                    revertirJugadaAnterior(saldos, guardado, estadoPago, valorColor);
                 }
 
                 if (nuevaJugadora === "") {
                     updates['color_ronda_' + i] = null;
                     updates['estado_pago_color_' + i] = null;
                 } else {
-                    alAsignarJugada(saldos, nuevaJugadora, valorColor);
+                    let nuevoEstado = aplicarAsignacionAutomatica(saldos, nuevaJugadora, valorColor);
                     updates['color_ronda_' + i] = nuevaJugadora;
-                    updates['estado_pago_color_' + i] = 'pendiente';
+                    updates['estado_pago_color_' + i] = nuevoEstado;
                 }
 
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
@@ -1019,12 +1045,18 @@
                 if (!nombreJugadora) { alert("Selecciona una jugadora en este color primero."); return; }
 
                 let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
-                let nuevoEstado = (estadoPago === 'pendiente') ? 'pagado' : 'pendiente';
+                let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                alAlternarPago(saldos, nombreJugadora, estadoPago, valorColor);
-                updates['estado_pago_color_' + i] = nuevoEstado;
+                if (estadoActual === 'pendiente') {
+                    if (valorColor > 0) saldos[nombreJugadora] = (saldos[nombreJugadora] || 0) - valorColor;
+                    updates['estado_pago_color_' + i] = 'pagado';
+                } else {
+                    if (valorColor > 0) saldos[nombreJugadora] = (saldos[nombreJugadora] || 0) + valorColor;
+                    updates['estado_pago_color_' + i] = 'pendiente';
+                }
+
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
                 guardarLoteFirebase(updates);
             });
@@ -1259,7 +1291,7 @@
                     let jug = obtenerJugadoraLinea(i, t);
                     let est = obtenerEstadoPagoLinea(i, t);
                     if (jug && jug !== "") {
-                        alQuitarJugada(saldos, jug, est, valorLinea);
+                        revertirJugadaAnterior(saldos, jug, est, valorLinea);
                     }
                     setLineaUpdates(updates, i, t, null, null);
                 }
@@ -1279,7 +1311,7 @@
                 let jug = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
                 let est = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
                 if (jug && jug !== "") {
-                    alQuitarJugada(saldos, jug, est, valorObjeto);
+                    revertirJugadaAnterior(saldos, jug, est, valorObjeto);
                 }
                 updates['objeto_ronda_' + i] = null;
                 updates['estado_pago_objeto_' + i] = null;
@@ -1299,7 +1331,7 @@
                 let jug = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
                 let est = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
                 if (jug && jug !== "") {
-                    alQuitarJugada(saldos, jug, est, valorColor);
+                    revertirJugadaAnterior(saldos, jug, est, valorColor);
                 }
                 updates['color_ronda_' + i] = null;
                 updates['estado_pago_color_' + i] = null;
