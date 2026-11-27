@@ -581,10 +581,14 @@
 
     function leerCostoSeguro(inputId, claveRemota) {
         const el = document.getElementById(inputId);
-        const valInput = el ? parseFloat(el.value) : NaN;
-        if (!isNaN(valInput) && valInput > 0) return valInput;
-        const valRemoto = window._dbRemota ? parseFloat(window._dbRemota[claveRemota]) : NaN;
-        if (!isNaN(valRemoto) && valRemoto > 0) return valRemoto;
+        if (el && el.value !== "") {
+            const valInput = parseFloat(el.value);
+            if (!isNaN(valInput) && valInput > 0) return valInput;
+        }
+        if (window._dbRemota && window._dbRemota[claveRemota] !== undefined && window._dbRemota[claveRemota] !== "") {
+            const valRemoto = parseFloat(window._dbRemota[claveRemota]);
+            if (!isNaN(valRemoto) && valRemoto > 0) return valRemoto;
+        }
         return 0;
     }
 
@@ -606,28 +610,29 @@
 
     function descontarJugada(saldos, jugadora, costo) {
         if (jugadora !== "" && costo > 0) {
-            if (typeof saldos[jugadora] !== 'number' || isNaN(saldos[jugadora])) {
-                saldos[jugadora] = 0;
-            }
-            saldos[jugadora] -= costo;
+            const actual = typeof saldos[jugadora] === 'number' && !isNaN(saldos[jugadora]) ? saldos[jugadora] : 0;
+            saldos[jugadora] = actual - costo;
+        }
+    }
+
+    function sumarPagoJugada(saldos, jugadora, costo) {
+        if (jugadora !== "" && costo > 0) {
+            const actual = typeof saldos[jugadora] === 'number' && !isNaN(saldos[jugadora]) ? saldos[jugadora] : 0;
+            saldos[jugadora] = actual + costo;
         }
     }
 
     function devolverJugadaPendiente(saldos, jugadora, estadoPago, costo) {
         if (jugadora !== "" && costo > 0 && estadoPago !== 'pagado') {
-            if (typeof saldos[jugadora] !== 'number' || isNaN(saldos[jugadora])) {
-                saldos[jugadora] = 0;
-            }
-            saldos[jugadora] += costo;
+            const actual = typeof saldos[jugadora] === 'number' && !isNaN(saldos[jugadora]) ? saldos[jugadora] : 0;
+            saldos[jugadora] = actual + costo;
         }
     }
 
     function acreditarPremio(saldos, jugadora, monto) {
         if (jugadora !== "" && monto > 0) {
-            if (typeof saldos[jugadora] !== 'number' || isNaN(saldos[jugadora])) {
-                saldos[jugadora] = 0;
-            }
-            saldos[jugadora] += monto;
+            const actual = typeof saldos[jugadora] === 'number' && !isNaN(saldos[jugadora]) ? saldos[jugadora] : 0;
+            saldos[jugadora] = actual + monto;
         }
     }
 
@@ -732,8 +737,8 @@
     }
     function cargarValorLinea() {
         const el = document.getElementById('valor_linea_config');
-        if (document.activeElement !== el) {
-            el.value = (window._dbRemota && window._dbRemota.valor_linea_costo) || '';
+        if (document.activeElement !== el && window._dbRemota && window._dbRemota.valor_linea_costo !== undefined) {
+            el.value = window._dbRemota.valor_linea_costo;
         }
     }
 
@@ -744,8 +749,8 @@
     }
     function cargarValorObjeto() {
         const el = document.getElementById('valor_objeto_config');
-        if (document.activeElement !== el) {
-            el.value = (window._dbRemota && window._dbRemota.valor_objeto_costo) || '';
+        if (document.activeElement !== el && window._dbRemota && window._dbRemota.valor_objeto_costo !== undefined) {
+            el.value = window._dbRemota.valor_objeto_costo;
         }
     }
 
@@ -756,8 +761,8 @@
     }
     function cargarValorColor() {
         const el = document.getElementById('valor_color_config');
-        if (document.activeElement !== el) {
-            el.value = (window._dbRemota && window._dbRemota.valor_color_costo) || '';
+        if (document.activeElement !== el && window._dbRemota && window._dbRemota.valor_color_costo !== undefined) {
+            el.value = window._dbRemota.valor_color_costo;
         }
     }
 
@@ -823,7 +828,8 @@
 
         select.addEventListener('change', function() {
             let valorLinea = leerCostoSeguro('valor_linea_config', 'valor_linea_costo');
-            let anteriorJugadora = guardado;
+            let anteriorJugadora = obtenerJugadoraLinea(lineaNum, tandaNum);
+            let estadoAnterior = obtenerEstadoPagoLinea(lineaNum, tandaNum);
             let nuevaJugadora = select.value;
 
             if (nuevaJugadora !== "" && valorLinea <= 0) {
@@ -833,7 +839,7 @@
             let saldos = obtenerSaldos();
             let updates = {};
 
-            devolverJugadaPendiente(saldos, anteriorJugadora, estadoPago, valorLinea);
+            devolverJugadaPendiente(saldos, anteriorJugadora, estadoAnterior, valorLinea);
 
             if (nuevaJugadora === "") {
                 setLineaUpdates(updates, lineaNum, tandaNum, null, null);
@@ -847,29 +853,29 @@
         });
 
         let btnPago = document.createElement('button');
+        btnPago.type = 'button';
         btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
         btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
         
         btnPago.addEventListener('click', function() {
-            let nombreJugadora = select.value;
+            let nombreJugadora = obtenerJugadoraLinea(lineaNum, tandaNum) || select.value;
             if (nombreJugadora === "") { alert("Selecciona una jugadora en esta línea primero."); return; }
 
             let valorLinea = leerCostoSeguro('valor_linea_config', 'valor_linea_costo');
+            if (valorLinea <= 0) {
+                alert("Escribe primero el 'Costo de cada Línea' para poder calcular el pago.");
+                return;
+            }
+
             let estadoActual = obtenerEstadoPagoLinea(lineaNum, tandaNum);
             let saldos = obtenerSaldos();
             let updates = {};
 
             if (estadoActual !== 'pagado') {
-                if (valorLinea > 0) {
-                    if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                    saldos[nombreJugadora] += valorLinea;
-                }
+                sumarPagoJugada(saldos, nombreJugadora, valorLinea);
                 setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pagado');
             } else {
-                if (valorLinea > 0) {
-                    if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                    saldos[nombreJugadora] -= valorLinea;
-                }
+                descontarJugada(saldos, nombreJugadora, valorLinea);
                 setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pendiente');
             }
 
@@ -966,7 +972,8 @@
 
             select.addEventListener('change', function() {
                 let valorObjeto = leerCostoSeguro('valor_objeto_config', 'valor_objeto_costo');
-                let anteriorJugadora = guardado;
+                let anteriorJugadora = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
+                let estadoAnterior = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
                 let nuevaJugadora = select.value;
 
                 if (nuevaJugadora !== "" && valorObjeto <= 0) {
@@ -976,7 +983,7 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                devolverJugadaPendiente(saldos, anteriorJugadora, estadoPago, valorObjeto);
+                devolverJugadaPendiente(saldos, anteriorJugadora, estadoAnterior, valorObjeto);
 
                 if (nuevaJugadora === "") {
                     updates['objeto_ronda_' + i] = null;
@@ -992,29 +999,29 @@
             });
 
             let btnPago = document.createElement('button');
+            btnPago.type = 'button';
             btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
             
             btnPago.addEventListener('click', function() {
-                let nombreJugadora = select.value;
+                let nombreJugadora = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este objeto primero."); return; }
 
                 let valorObjeto = leerCostoSeguro('valor_objeto_config', 'valor_objeto_costo');
+                if (valorObjeto <= 0) {
+                    alert("Escribe primero el 'Costo de cada Objeto' para poder calcular el pago.");
+                    return;
+                }
+
                 let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
                 let saldos = obtenerSaldos();
                 let updates = {};
 
                 if (estadoActual !== 'pagado') {
-                    if (valorObjeto > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] += valorObjeto;
-                    }
+                    sumarPagoJugada(saldos, nombreJugadora, valorObjeto);
                     updates['estado_pago_objeto_' + i] = 'pagado';
                 } else {
-                    if (valorObjeto > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] -= valorObjeto;
-                    }
+                    descontarJugada(saldos, nombreJugadora, valorObjeto);
                     updates['estado_pago_objeto_' + i] = 'pendiente';
                 }
 
@@ -1068,7 +1075,8 @@
 
             select.addEventListener('change', function() {
                 let valorColor = leerCostoSeguro('valor_color_config', 'valor_color_costo');
-                let anteriorJugadora = guardado;
+                let anteriorJugadora = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
+                let estadoAnterior = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
                 let nuevaJugadora = select.value;
 
                 if (nuevaJugadora !== "" && valorColor <= 0) {
@@ -1078,7 +1086,7 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                devolverJugadaPendiente(saldos, anteriorJugadora, estadoPago, valorColor);
+                devolverJugadaPendiente(saldos, anteriorJugadora, estadoAnterior, valorColor);
 
                 if (nuevaJugadora === "") {
                     updates['color_ronda_' + i] = null;
@@ -1094,29 +1102,29 @@
             });
 
             let btnPago = document.createElement('button');
+            btnPago.type = 'button';
             btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
             
             btnPago.addEventListener('click', function() {
-                let nombreJugadora = select.value;
+                let nombreJugadora = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este color primero."); return; }
 
                 let valorColor = leerCostoSeguro('valor_color_config', 'valor_color_costo');
+                if (valorColor <= 0) {
+                    alert("Escribe primero el 'Costo de cada Color' para poder calcular el pago.");
+                    return;
+                }
+
                 let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
                 let saldos = obtenerSaldos();
                 let updates = {};
 
                 if (estadoActual !== 'pagado') {
-                    if (valorColor > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] += valorColor;
-                    }
+                    sumarPagoJugada(saldos, nombreJugadora, valorColor);
                     updates['estado_pago_color_' + i] = 'pagado';
                 } else {
-                    if (valorColor > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] -= valorColor;
-                    }
+                    descontarJugada(saldos, nombreJugadora, valorColor);
                     updates['estado_pago_color_' + i] = 'pendiente';
                 }
 
