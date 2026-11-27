@@ -542,6 +542,7 @@
     const maxTandasLineas = 3;
 
     window._dbRemota = {};
+    let _procesandoCambioSelect = false;
     
     const listaObjetosNombres = [
         "1 🪜 La Escalera", "2 💍 El Anillo", "3 🔑 La Llave", "4 ⭐ La Estrella",
@@ -622,9 +623,6 @@
         }
     }
 
-    // Al quitar una jugada (-- Disponible --):
-    // - Si estaba pendiente (ej: -1000), suma +1000 y queda en 0 (quita la deuda).
-    // - Si ya estaba pagada (ej: 0), suma +1000 y queda en +1000 (saldo a favor porque ya la pagó y no la jugó).
     function devolverJugadaAlQuitar(saldos, jugadora, costo) {
         if (jugadora !== "" && costo > 0) {
             const actual = typeof saldos[jugadora] === 'number' && !isNaN(saldos[jugadora]) ? saldos[jugadora] : 0;
@@ -815,6 +813,7 @@
         let select = document.createElement('select');
         select.className = 'line-select';
         select.id = `select_linea_${lineaNum}_t${tandaNum}`;
+        select.dataset.prevJugador = guardado;
 
         let optDefault = document.createElement('option');
         optDefault.value = "";
@@ -830,28 +829,38 @@
         });
 
         select.addEventListener('change', function() {
-            let valorLinea = leerCostoSeguro('valor_linea_config', 'valor_linea_costo');
-            let anteriorJugadora = obtenerJugadoraLinea(lineaNum, tandaNum);
-            let nuevaJugadora = select.value;
+            if (_procesandoCambioSelect) return;
+            _procesandoCambioSelect = true;
 
-            if (nuevaJugadora !== "" && valorLinea <= 0) {
-                alert("Escribe primero el 'Costo de cada Línea' (por ejemplo 1000) para que pueda descontar.");
+            try {
+                let valorLinea = leerCostoSeguro('valor_linea_config', 'valor_linea_costo');
+                let anteriorJugadora = select.dataset.prevJugador || '';
+                let nuevaJugadora = select.value;
+
+                if (anteriorJugadora === nuevaJugadora) return;
+
+                if (nuevaJugadora !== "" && valorLinea <= 0) {
+                    alert("Escribe primero el 'Costo de cada Línea' (por ejemplo 1000) para que pueda descontar.");
+                }
+
+                let saldos = obtenerSaldos();
+                let updates = {};
+
+                devolverJugadaAlQuitar(saldos, anteriorJugadora, valorLinea);
+
+                if (nuevaJugadora === "") {
+                    setLineaUpdates(updates, lineaNum, tandaNum, null, null);
+                } else {
+                    descontarJugada(saldos, nuevaJugadora, valorLinea);
+                    setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, 'pendiente');
+                }
+
+                select.dataset.prevJugador = nuevaJugadora;
+                updates['saldos_jugadoras'] = JSON.stringify(saldos);
+                guardarLoteFirebase(updates);
+            } finally {
+                setTimeout(() => { _procesandoCambioSelect = false; }, 50);
             }
-
-            let saldos = obtenerSaldos();
-            let updates = {};
-
-            devolverJugadaAlQuitar(saldos, anteriorJugadora, valorLinea);
-
-            if (nuevaJugadora === "") {
-                setLineaUpdates(updates, lineaNum, tandaNum, null, null);
-            } else {
-                descontarJugada(saldos, nuevaJugadora, valorLinea);
-                setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, 'pendiente');
-            }
-
-            updates['saldos_jugadoras'] = JSON.stringify(saldos);
-            guardarLoteFirebase(updates);
         });
 
         let btnPago = document.createElement('button');
@@ -958,6 +967,7 @@
             let select = document.createElement('select');
             select.className = 'line-select';
             select.id = 'select_objeto_' + i;
+            select.dataset.prevJugador = guardado;
 
             let optDefault = document.createElement('option');
             optDefault.value = "";
@@ -973,30 +983,40 @@
             });
 
             select.addEventListener('change', function() {
-                let valorObjeto = leerCostoSeguro('valor_objeto_config', 'valor_objeto_costo');
-                let anteriorJugadora = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
-                let nuevaJugadora = select.value;
+                if (_procesandoCambioSelect) return;
+                _procesandoCambioSelect = true;
 
-                if (nuevaJugadora !== "" && valorObjeto <= 0) {
-                    alert("Escribe primero el 'Costo de cada Objeto' (por ejemplo 1000) para que pueda descontar.");
+                try {
+                    let valorObjeto = leerCostoSeguro('valor_objeto_config', 'valor_objeto_costo');
+                    let anteriorJugadora = select.dataset.prevJugador || '';
+                    let nuevaJugadora = select.value;
+
+                    if (anteriorJugadora === nuevaJugadora) return;
+
+                    if (nuevaJugadora !== "" && valorObjeto <= 0) {
+                        alert("Escribe primero el 'Costo de cada Objeto' (por ejemplo 1000) para que pueda descontar.");
+                    }
+
+                    let saldos = obtenerSaldos();
+                    let updates = {};
+
+                    devolverJugadaAlQuitar(saldos, anteriorJugadora, valorObjeto);
+
+                    if (nuevaJugadora === "") {
+                        updates['objeto_ronda_' + i] = null;
+                        updates['estado_pago_objeto_' + i] = null;
+                    } else {
+                        descontarJugada(saldos, nuevaJugadora, valorObjeto);
+                        updates['objeto_ronda_' + i] = nuevaJugadora;
+                        updates['estado_pago_objeto_' + i] = 'pendiente';
+                    }
+
+                    select.dataset.prevJugador = nuevaJugadora;
+                    updates['saldos_jugadoras'] = JSON.stringify(saldos);
+                    guardarLoteFirebase(updates);
+                } finally {
+                    setTimeout(() => { _procesandoCambioSelect = false; }, 50);
                 }
-
-                let saldos = obtenerSaldos();
-                let updates = {};
-
-                devolverJugadaAlQuitar(saldos, anteriorJugadora, valorObjeto);
-
-                if (nuevaJugadora === "") {
-                    updates['objeto_ronda_' + i] = null;
-                    updates['estado_pago_objeto_' + i] = null;
-                } else {
-                    descontarJugada(saldos, nuevaJugadora, valorObjeto);
-                    updates['objeto_ronda_' + i] = nuevaJugadora;
-                    updates['estado_pago_objeto_' + i] = 'pendiente';
-                }
-
-                updates['saldos_jugadoras'] = JSON.stringify(saldos);
-                guardarLoteFirebase(updates);
             });
 
             let btnPago = document.createElement('button');
@@ -1060,6 +1080,7 @@
             let select = document.createElement('select');
             select.className = 'line-select';
             select.id = 'select_color_' + i;
+            select.dataset.prevJugador = guardado;
 
             let optDefault = document.createElement('option');
             optDefault.value = "";
@@ -1075,30 +1096,40 @@
             });
 
             select.addEventListener('change', function() {
-                let valorColor = leerCostoSeguro('valor_color_config', 'valor_color_costo');
-                let anteriorJugadora = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
-                let nuevaJugadora = select.value;
+                if (_procesandoCambioSelect) return;
+                _procesandoCambioSelect = true;
 
-                if (nuevaJugadora !== "" && valorColor <= 0) {
-                    alert("Escribe primero el 'Costo de cada Color' (por ejemplo 1000) para que pueda descontar.");
+                try {
+                    let valorColor = leerCostoSeguro('valor_color_config', 'valor_color_costo');
+                    let anteriorJugadora = select.dataset.prevJugador || '';
+                    let nuevaJugadora = select.value;
+
+                    if (anteriorJugadora === nuevaJugadora) return;
+
+                    if (nuevaJugadora !== "" && valorColor <= 0) {
+                        alert("Escribe primero el 'Costo de cada Color' (por ejemplo 1000) para que pueda descontar.");
+                    }
+
+                    let saldos = obtenerSaldos();
+                    let updates = {};
+
+                    devolverJugadaAlQuitar(saldos, anteriorJugadora, valorColor);
+
+                    if (nuevaJugadora === "") {
+                        updates['color_ronda_' + i] = null;
+                        updates['estado_pago_color_' + i] = null;
+                    } else {
+                        descontarJugada(saldos, nuevaJugadora, valorColor);
+                        updates['color_ronda_' + i] = nuevaJugadora;
+                        updates['estado_pago_color_' + i] = 'pendiente';
+                    }
+
+                    select.dataset.prevJugador = nuevaJugadora;
+                    updates['saldos_jugadoras'] = JSON.stringify(saldos);
+                    guardarLoteFirebase(updates);
+                } finally {
+                    setTimeout(() => { _procesandoCambioSelect = false; }, 50);
                 }
-
-                let saldos = obtenerSaldos();
-                let updates = {};
-
-                devolverJugadaAlQuitar(saldos, anteriorJugadora, valorColor);
-
-                if (nuevaJugadora === "") {
-                    updates['color_ronda_' + i] = null;
-                    updates['estado_pago_color_' + i] = null;
-                } else {
-                    descontarJugada(saldos, nuevaJugadora, valorColor);
-                    updates['color_ronda_' + i] = nuevaJugadora;
-                    updates['estado_pago_color_' + i] = 'pendiente';
-                }
-
-                updates['saldos_jugadoras'] = JSON.stringify(saldos);
-                guardarLoteFirebase(updates);
             });
 
             let btnPago = document.createElement('button');
