@@ -589,34 +589,51 @@
         }
     }
 
-    // Regla automática al asignar:
-    // - Si tiene saldo positivo (saldoActual > 0): descuenta `costoNum` de su saldo y marca la jugada como 'pagado' (verde ✔️).
-    // - Si no tiene saldo positivo (saldoActual <= 0): suma `costoNum` a su saldo y deja la jugada como 'pendiente'.
-    function aplicarAsignacionAutomatica(saldos, jugadora, costo) {
-        if (!jugadora) return 'pendiente';
-        let saldoActual = Number(saldos[jugadora] || 0);
-        let costoNum = Number(costo || 0);
-        if (!costoNum || costoNum <= 0) {
-            saldos[jugadora] = saldoActual;
-            return 'pendiente';
-        }
-        if (saldoActual > 0) {
-            saldos[jugadora] = saldoActual - costoNum;
-            return 'pagado';
-        } else {
-            saldos[jugadora] = saldoActual + costoNum;
-            return 'pendiente';
+    function limpiarSaldoSiCero(saldos, jugadora) {
+        if (Number(saldos[jugadora] || 0) === 0) {
+            delete saldos[jugadora];
         }
     }
 
-    function revertirJugadaAnterior(saldos, jugadora, estadoAnterior, costo) {
+    // Al asignar una jugada: RESTA el costo al saldo (queda en negativo si no tenía saldo a favor) y marca como 'pendiente'.
+    function asignarJugadaRestando(saldos, jugadora, costo) {
+        if (!jugadora) return 'pendiente';
+        let saldoActual = Number(saldos[jugadora] || 0);
+        let costoNum = Number(costo || 0);
+        if (costoNum > 0) {
+            saldos[jugadora] = saldoActual - costoNum;
+        }
+        return 'pendiente';
+    }
+
+    // Al desasignar o vaciar una jugada: devuelve el monto que se había restado.
+    function revertirAsignacion(saldos, jugadora, estadoAnterior, costo) {
         let costoNum = Number(costo || 0);
         if (!jugadora || !costoNum || costoNum <= 0) return;
         let saldoActual = Number(saldos[jugadora] || 0);
-        if (estadoAnterior === 'pagado') {
+        if (estadoAnterior === 'pendiente') {
             saldos[jugadora] = saldoActual + costoNum;
+        }
+        limpiarSaldoSiCero(saldos, jugadora);
+    }
+
+    // Al marcar como pagada ('pagado'): SUMA el costo de vuelta para que el saldo suba hacia 0.
+    // Si se desmarca ('pendiente'): RESTA el costo otra vez.
+    function alternarPagoJugada(saldos, jugadora, estadoActual, costo) {
+        let costoNum = Number(costo || 0);
+        let saldoActual = Number(saldos[jugadora] || 0);
+        if (estadoActual === 'pendiente') {
+            if (costoNum > 0) {
+                saldos[jugadora] = saldoActual + costoNum;
+            }
+            limpiarSaldoSiCero(saldos, jugadora);
+            return 'pagado';
         } else {
-            saldos[jugadora] = saldoActual - costoNum;
+            if (costoNum > 0) {
+                saldos[jugadora] = saldoActual - costoNum;
+            }
+            limpiarSaldoSiCero(saldos, jugadora);
+            return 'pendiente';
         }
     }
 
@@ -789,13 +806,13 @@
             let updates = {};
 
             if (guardado && guardado !== "") {
-                revertirJugadaAnterior(saldos, guardado, estadoPago, valorLinea);
+                revertirAsignacion(saldos, guardado, estadoPago, valorLinea);
             }
 
             if (nuevaJugadora === "") {
                 setLineaUpdates(updates, lineaNum, tandaNum, null, null);
             } else {
-                let nuevoEstado = aplicarAsignacionAutomatica(saldos, nuevaJugadora, valorLinea);
+                let nuevoEstado = asignarJugadaRestando(saldos, nuevaJugadora, valorLinea);
                 setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, nuevoEstado);
             }
 
@@ -817,17 +834,8 @@
             let saldos = obtenerSaldos();
             let updates = {};
 
-            if (estadoActual === 'pendiente') {
-                if (valorLinea > 0) {
-                    saldos[nombreJugadora] = Number(saldos[nombreJugadora] || 0) - valorLinea;
-                }
-                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pagado');
-            } else {
-                if (valorLinea > 0) {
-                    saldos[nombreJugadora] = Number(saldos[nombreJugadora] || 0) + valorLinea;
-                }
-                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pendiente');
-            }
+            let nuevoEstado = alternarPagoJugada(saldos, nombreJugadora, estadoActual, valorLinea);
+            setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, nuevoEstado);
 
             updates['saldos_jugadoras'] = JSON.stringify(saldos);
             guardarLoteFirebase(updates);
@@ -928,14 +936,14 @@
                 let updates = {};
 
                 if (guardado && guardado !== "") {
-                    revertirJugadaAnterior(saldos, guardado, estadoPago, valorObjeto);
+                    revertirAsignacion(saldos, guardado, estadoPago, valorObjeto);
                 }
 
                 if (nuevaJugadora === "") {
                     updates['objeto_ronda_' + i] = null;
                     updates['estado_pago_objeto_' + i] = null;
                 } else {
-                    let nuevoEstado = aplicarAsignacionAutomatica(saldos, nuevaJugadora, valorObjeto);
+                    let nuevoEstado = asignarJugadaRestando(saldos, nuevaJugadora, valorObjeto);
                     updates['objeto_ronda_' + i] = nuevaJugadora;
                     updates['estado_pago_objeto_' + i] = nuevoEstado;
                 }
@@ -958,13 +966,8 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                if (estadoActual === 'pendiente') {
-                    if (valorObjeto > 0) saldos[nombreJugadora] = Number(saldos[nombreJugadora] || 0) - valorObjeto;
-                    updates['estado_pago_objeto_' + i] = 'pagado';
-                } else {
-                    if (valorObjeto > 0) saldos[nombreJugadora] = Number(saldos[nombreJugadora] || 0) + valorObjeto;
-                    updates['estado_pago_objeto_' + i] = 'pendiente';
-                }
+                let nuevoEstado = alternarPagoJugada(saldos, nombreJugadora, estadoActual, valorObjeto);
+                updates['estado_pago_objeto_' + i] = nuevoEstado;
 
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
                 guardarLoteFirebase(updates);
@@ -1022,14 +1025,14 @@
                 let updates = {};
 
                 if (guardado && guardado !== "") {
-                    revertirJugadaAnterior(saldos, guardado, estadoPago, valorColor);
+                    revertirAsignacion(saldos, guardado, estadoPago, valorColor);
                 }
 
                 if (nuevaJugadora === "") {
                     updates['color_ronda_' + i] = null;
                     updates['estado_pago_color_' + i] = null;
                 } else {
-                    let nuevoEstado = aplicarAsignacionAutomatica(saldos, nuevaJugadora, valorColor);
+                    let nuevoEstado = asignarJugadaRestando(saldos, nuevaJugadora, valorColor);
                     updates['color_ronda_' + i] = nuevaJugadora;
                     updates['estado_pago_color_' + i] = nuevoEstado;
                 }
@@ -1052,13 +1055,8 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                if (estadoActual === 'pendiente') {
-                    if (valorColor > 0) saldos[nombreJugadora] = Number(saldos[nombreJugadora] || 0) - valorColor;
-                    updates['estado_pago_color_' + i] = 'pagado';
-                } else {
-                    if (valorColor > 0) saldos[nombreJugadora] = Number(saldos[nombreJugadora] || 0) + valorColor;
-                    updates['estado_pago_color_' + i] = 'pendiente';
-                }
+                let nuevoEstado = alternarPagoJugada(saldos, nombreJugadora, estadoActual, valorColor);
+                updates['estado_pago_color_' + i] = nuevoEstado;
 
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
                 guardarLoteFirebase(updates);
@@ -1294,7 +1292,7 @@
                     let jug = obtenerJugadoraLinea(i, t);
                     let est = obtenerEstadoPagoLinea(i, t);
                     if (jug && jug !== "") {
-                        revertirJugadaAnterior(saldos, jug, est, valorLinea);
+                        revertirAsignacion(saldos, jug, est, valorLinea);
                     }
                     setLineaUpdates(updates, i, t, null, null);
                 }
@@ -1314,7 +1312,7 @@
                 let jug = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
                 let est = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
                 if (jug && jug !== "") {
-                    revertirJugadaAnterior(saldos, jug, est, valorObjeto);
+                    revertirAsignacion(saldos, jug, est, valorObjeto);
                 }
                 updates['objeto_ronda_' + i] = null;
                 updates['estado_pago_objeto_' + i] = null;
@@ -1334,7 +1332,7 @@
                 let jug = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
                 let est = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
                 if (jug && jug !== "") {
-                    revertirJugadaAnterior(saldos, jug, est, valorColor);
+                    revertirAsignacion(saldos, jug, est, valorColor);
                 }
                 updates['color_ronda_' + i] = null;
                 updates['estado_pago_color_' + i] = null;
@@ -1364,6 +1362,7 @@
                     if (jugadas.length > 0) {
                         jugadas.forEach(nombre => {
                             saldos[nombre] = Number(saldos[nombre] || 0) + monto;
+                            limpiarSaldoSiCero(saldos, nombre);
                             registradas++;
                             resumenRondaText += `[Línea ${idx}: ${nombre} (+${monto})] `;
                         });
@@ -1416,7 +1415,8 @@
                 if (idx >= 1 && idx <= totalObjetos) {
                     let nombre = (window._dbRemota && window._dbRemota['objeto_ronda_' + idx]) || '';
                     if (nombre !== "") {
-                        saldos[nombre] = Number(saldos[nombre] || 0) + monto; 
+                        saldos[nombre] = Number(saldos[nombre] || 0) + monto;
+                        limpiarSaldoSiCero(saldos, nombre);
                         registradas++;
                         resumenRondaText += `[Obj ${idx}: ${nombre} (+${monto})] `;
                     }
@@ -1466,7 +1466,8 @@
                 if (idx >= 1 && idx <= totalColores) {
                     let nombre = (window._dbRemota && window._dbRemota['color_ronda_' + idx]) || '';
                     if (nombre !== "") {
-                        saldos[nombre] = Number(saldos[nombre] || 0) + monto; 
+                        saldos[nombre] = Number(saldos[nombre] || 0) + monto;
+                        limpiarSaldoSiCero(saldos, nombre);
                         registradas++;
                         resumenRondaText += `[Color ${idx}: ${nombre} (+${monto})] `;
                     }
@@ -1500,12 +1501,13 @@
     }
 
     function ajustarSaldoManual(nombre) {
-        let montoStr = prompt(`Ajustar saldo para ${nombre}:\nEscribe un número positivo (ej: 50 para sumar) o negativo (ej: -20 para descontar):`);
+        let montoStr = prompt(`Ajustar saldo para ${nombre}:\nEscribe un número positivo (ej: 50 para sumar) o negativo (ej: -20 para restar):`);
         if (montoStr !== null && montoStr.trim() !== "") {
             let cambio = parseFloat(montoStr);
             if (!isNaN(cambio)) {
                 let saldos = obtenerSaldos();
                 saldos[nombre] = Number(saldos[nombre] || 0) + cambio;
+                limpiarSaldoSiCero(saldos, nombre);
                 guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             } else {
                 alert("Por favor introduce un número válido.");
