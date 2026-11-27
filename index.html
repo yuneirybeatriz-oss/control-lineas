@@ -1173,7 +1173,7 @@
                 if (val !== "") {
                     let estado = obtenerEstadoPagoLinea(i, t);
                     let iconoEstado = (estado === 'pagado') ? '✔️' : '❌';
-                    entradas.push({ nombre: val, icono: iconoEstado, tanda: t });
+                    entradas.push({ nombre: val, icono: iconoEstado });
                     totalJugadas++;
                 }
             }
@@ -1186,7 +1186,7 @@
                     let etiquetaRep = entradas.length === 2 ? 'Doble' : 'Triple';
                     let todosPagados = entradas.every(e => e.icono === '✔️');
                     let iconoFinal = todosPagados ? '✔️' : '❌';
-                    texto += `${i} - *${entradas[0].nombre}* (${etiquetaRep}) ${iconoFinal}\n`;
+                    texto += `${i} - *${entradas[0].nombre}* ${iconoFinal} (${etiquetaRep})\n`;
                 } else {
                     let partes = entradas.map(e => `*${e.nombre}* ${e.icono}`);
                     texto += `${i} - ${partes.join(' / ')}\n`;
