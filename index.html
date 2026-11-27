@@ -522,7 +522,7 @@
 
     <!-- ZONA DE PELIGRO -->
     <div class="danger-zone">
-        <button class="btn-reset-day" onclick="reiniciarDia()">⚠️ Reiniciar Día (Conserva Jugadoras Fijas)</button>
+        <button class="btn-reset-day" onclick="reiniciarDia()">⚠️ Reiniciar Día (Borrar Todo y Saldos)</button>
     </div>
 </div>
 
@@ -589,51 +589,23 @@
         }
     }
 
-    // 1. Al asignar: resta el costo. Si tenía saldo positivo (> 0), queda pagado (✔️);
-    // si no tenía positivo, queda negativo y pendiente (↻).
-    function asignarJugada(saldos, jugadora, costo) {
-        if (!jugadora) return 'pendiente';
-        let costoNum = Math.abs(Number(costo || 0));
-        let saldoAnterior = Number(saldos[jugadora] || 0);
-        if (costoNum > 0) {
-            saldos[jugadora] = saldoAnterior - costoNum;
-            if (saldoAnterior > 0) {
-                return 'pagado';
-            }
+    // Matemática exacta del código base:
+    // - Al quitar/devolver jugada: suma el costo (saldos[jugadora] += costo)
+    // - Al asignar jugada: resta el costo (saldos[jugadora] -= costo); queda 'pagado' si saldo >= 0, si no 'pendiente'
+    function devolverJugadaBase(saldos, jugadora, costo) {
+        if (jugadora !== "" && costo > 0) {
+            if (!saldos[jugadora]) saldos[jugadora] = 0;
+            saldos[jugadora] += costo;
+        }
+    }
+
+    function asignarJugadaBase(saldos, jugadora, costo) {
+        if (jugadora !== "" && costo > 0) {
+            if (!saldos[jugadora]) saldos[jugadora] = 0;
+            saldos[jugadora] -= costo;
+            return saldos[jugadora] >= 0 ? 'pagado' : 'pendiente';
         }
         return 'pendiente';
-    }
-
-    // 2. Al quitar ("-- Disponible --" o vaciar): revierte exactamente la jugada
-    // para que el saldo no se descuadre (si estaba pendiente suma +costo; si estaba pagada resta -costo).
-    function quitarJugada(saldos, jugadora, estadoAnterior, costo) {
-        let costoNum = Math.abs(Number(costo || 0));
-        if (!jugadora || !costoNum) return;
-        let saldoActual = Number(saldos[jugadora] || 0);
-        if (estadoAnterior === 'pagado') {
-            saldos[jugadora] = saldoActual - costoNum;
-        } else {
-            saldos[jugadora] = saldoActual + costoNum;
-        }
-    }
-
-    // 3. Al pulsar botón de pago:
-    // - Si estaba pendiente (↻) -> suma el costo (ej. -1000 + 1000 = 0) y pasa a pagado (✔️).
-    // - Si estaba pagado (✔️) -> resta el costo (ej. 0 - 1000 = -1000) y pasa a pendiente (↻).
-    function alternarPago(saldos, jugadora, estadoActual, costo) {
-        let costoNum = Math.abs(Number(costo || 0));
-        let saldoActual = Number(saldos[jugadora] || 0);
-        if (estadoActual === 'pendiente') {
-            if (costoNum > 0) {
-                saldos[jugadora] = saldoActual + costoNum;
-            }
-            return 'pagado';
-        } else {
-            if (costoNum > 0) {
-                saldos[jugadora] = saldoActual - costoNum;
-            }
-            return 'pendiente';
-        }
     }
 
     function obtenerTandaActual() {
@@ -800,18 +772,20 @@
         select.addEventListener('change', function() {
             if (bloqueandoAccion) return;
             let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
+            let anteriorJugadora = guardado;
             let nuevaJugadora = select.value;
             let saldos = obtenerSaldos();
             let updates = {};
 
-            if (guardado && guardado !== "") {
-                quitarJugada(saldos, guardado, estadoPago, valorLinea);
-            }
+            devolverJugadaBase(saldos, anteriorJugadora, valorLinea);
 
             if (nuevaJugadora === "") {
                 setLineaUpdates(updates, lineaNum, tandaNum, null, null);
             } else {
-                let nuevoEstado = asignarJugada(saldos, nuevaJugadora, valorLinea);
+                let nuevoEstado = estadoPago;
+                if (valorLinea > 0) {
+                    nuevoEstado = asignarJugadaBase(saldos, nuevaJugadora, valorLinea);
+                }
                 setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, nuevoEstado);
             }
 
@@ -825,16 +799,27 @@
         
         btnPago.addEventListener('click', function() {
             if (bloqueandoAccion) return;
-            let nombreJugadora = guardado || select.value;
-            if (!nombreJugadora) { alert("Selecciona una jugadora en esta línea primero."); return; }
+            let nombreJugadora = select.value;
+            if (nombreJugadora === "") { alert("Selecciona una jugadora en esta línea primero."); return; }
 
-            let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
             let estadoActual = obtenerEstadoPagoLinea(lineaNum, tandaNum);
+            let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
             let saldos = obtenerSaldos();
             let updates = {};
 
-            let nuevoEstado = alternarPago(saldos, nombreJugadora, estadoActual, valorLinea);
-            setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, nuevoEstado);
+            if (estadoActual === 'pendiente') {
+                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pagado');
+                if (valorLinea > 0) {
+                    if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                    saldos[nombreJugadora] += valorLinea;
+                }
+            } else {
+                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pendiente');
+                if (valorLinea > 0) {
+                    if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                    saldos[nombreJugadora] -= valorLinea;
+                }
+            }
 
             updates['saldos_jugadoras'] = JSON.stringify(saldos);
             guardarLoteFirebase(updates);
@@ -930,19 +915,21 @@
             select.addEventListener('change', function() {
                 if (bloqueandoAccion) return;
                 let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
+                let anteriorJugadora = guardado;
                 let nuevaJugadora = select.value;
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                if (guardado && guardado !== "") {
-                    quitarJugada(saldos, guardado, estadoPago, valorObjeto);
-                }
+                devolverJugadaBase(saldos, anteriorJugadora, valorObjeto);
 
                 if (nuevaJugadora === "") {
                     updates['objeto_ronda_' + i] = null;
                     updates['estado_pago_objeto_' + i] = null;
                 } else {
-                    let nuevoEstado = asignarJugada(saldos, nuevaJugadora, valorObjeto);
+                    let nuevoEstado = estadoPago;
+                    if (valorObjeto > 0) {
+                        nuevoEstado = asignarJugadaBase(saldos, nuevaJugadora, valorObjeto);
+                    }
                     updates['objeto_ronda_' + i] = nuevaJugadora;
                     updates['estado_pago_objeto_' + i] = nuevoEstado;
                 }
@@ -957,16 +944,27 @@
             
             btnPago.addEventListener('click', function() {
                 if (bloqueandoAccion) return;
-                let nombreJugadora = guardado || select.value;
-                if (!nombreJugadora) { alert("Selecciona una jugadora en este objeto primero."); return; }
+                let nombreJugadora = select.value;
+                if (nombreJugadora === "") { alert("Selecciona una jugadora en este objeto primero."); return; }
 
-                let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
                 let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
+                let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                let nuevoEstado = alternarPago(saldos, nombreJugadora, estadoActual, valorObjeto);
-                updates['estado_pago_objeto_' + i] = nuevoEstado;
+                if (estadoActual === 'pendiente') {
+                    updates['estado_pago_objeto_' + i] = 'pagado';
+                    if (valorObjeto > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] += valorObjeto;
+                    }
+                } else {
+                    updates['estado_pago_objeto_' + i] = 'pendiente';
+                    if (valorObjeto > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] -= valorObjeto;
+                    }
+                }
 
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
                 guardarLoteFirebase(updates);
@@ -1019,19 +1017,21 @@
             select.addEventListener('change', function() {
                 if (bloqueandoAccion) return;
                 let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
+                let anteriorJugadora = guardado;
                 let nuevaJugadora = select.value;
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                if (guardado && guardado !== "") {
-                    quitarJugada(saldos, guardado, estadoPago, valorColor);
-                }
+                devolverJugadaBase(saldos, anteriorJugadora, valorColor);
 
                 if (nuevaJugadora === "") {
                     updates['color_ronda_' + i] = null;
                     updates['estado_pago_color_' + i] = null;
                 } else {
-                    let nuevoEstado = asignarJugada(saldos, nuevaJugadora, valorColor);
+                    let nuevoEstado = estadoPago;
+                    if (valorColor > 0) {
+                        nuevoEstado = asignarJugadaBase(saldos, nuevaJugadora, valorColor);
+                    }
                     updates['color_ronda_' + i] = nuevaJugadora;
                     updates['estado_pago_color_' + i] = nuevoEstado;
                 }
@@ -1046,16 +1046,27 @@
             
             btnPago.addEventListener('click', function() {
                 if (bloqueandoAccion) return;
-                let nombreJugadora = guardado || select.value;
-                if (!nombreJugadora) { alert("Selecciona una jugadora en este color primero."); return; }
+                let nombreJugadora = select.value;
+                if (nombreJugadora === "") { alert("Selecciona una jugadora en este color primero."); return; }
 
-                let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
                 let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
+                let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                let nuevoEstado = alternarPago(saldos, nombreJugadora, estadoActual, valorColor);
-                updates['estado_pago_color_' + i] = nuevoEstado;
+                if (estadoActual === 'pendiente') {
+                    updates['estado_pago_color_' + i] = 'pagado';
+                    if (valorColor > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] += valorColor;
+                    }
+                } else {
+                    updates['estado_pago_color_' + i] = 'pendiente';
+                    if (valorColor > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] -= valorColor;
+                    }
+                }
 
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
                 guardarLoteFirebase(updates);
@@ -1289,10 +1300,7 @@
             for (let i = 1; i <= totalLineas; i++) {
                 for (let t = 1; t <= maxTandasLineas; t++) {
                     let jug = obtenerJugadoraLinea(i, t);
-                    let est = obtenerEstadoPagoLinea(i, t);
-                    if (jug && jug !== "") {
-                        quitarJugada(saldos, jug, est, valorLinea);
-                    }
+                    devolverJugadaBase(saldos, jug, valorLinea);
                     setLineaUpdates(updates, i, t, null, null);
                 }
             }
@@ -1309,10 +1317,7 @@
 
             for (let i = 1; i <= totalObjetos; i++) {
                 let jug = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
-                let est = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
-                if (jug && jug !== "") {
-                    quitarJugada(saldos, jug, est, valorObjeto);
-                }
+                devolverJugadaBase(saldos, jug, valorObjeto);
                 updates['objeto_ronda_' + i] = null;
                 updates['estado_pago_objeto_' + i] = null;
             }
@@ -1329,10 +1334,7 @@
 
             for (let i = 1; i <= totalColores; i++) {
                 let jug = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
-                let est = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
-                if (jug && jug !== "") {
-                    quitarJugada(saldos, jug, est, valorColor);
-                }
+                devolverJugadaBase(saldos, jug, valorColor);
                 updates['color_ronda_' + i] = null;
                 updates['estado_pago_color_' + i] = null;
             }
@@ -1360,7 +1362,8 @@
                     let jugadas = obtenerJugadasDeLineaEnRonda(idx);
                     if (jugadas.length > 0) {
                         jugadas.forEach(nombre => {
-                            saldos[nombre] = Number(saldos[nombre] || 0) + monto;
+                            if (!saldos[nombre]) saldos[nombre] = 0;
+                            saldos[nombre] += monto;
                             registradas++;
                             resumenRondaText += `[Línea ${idx}: ${nombre} (+${monto})] `;
                         });
@@ -1413,7 +1416,8 @@
                 if (idx >= 1 && idx <= totalObjetos) {
                     let nombre = (window._dbRemota && window._dbRemota['objeto_ronda_' + idx]) || '';
                     if (nombre !== "") {
-                        saldos[nombre] = Number(saldos[nombre] || 0) + monto; 
+                        if (!saldos[nombre]) saldos[nombre] = 0;
+                        saldos[nombre] += monto; 
                         registradas++;
                         resumenRondaText += `[Obj ${idx}: ${nombre} (+${monto})] `;
                     }
@@ -1463,7 +1467,8 @@
                 if (idx >= 1 && idx <= totalColores) {
                     let nombre = (window._dbRemota && window._dbRemota['color_ronda_' + idx]) || '';
                     if (nombre !== "") {
-                        saldos[nombre] = Number(saldos[nombre] || 0) + monto; 
+                        if (!saldos[nombre]) saldos[nombre] = 0;
+                        saldos[nombre] += monto; 
                         registradas++;
                         resumenRondaText += `[Color ${idx}: ${nombre} (+${monto})] `;
                     }
@@ -1497,12 +1502,13 @@
     }
 
     function ajustarSaldoManual(nombre) {
-        let montoStr = prompt(`Ajustar saldo para ${nombre}:\nEscribe un número positivo (ej: 50 para sumar) o negativo (ej: -20 para restar):`);
+        let montoStr = prompt(`Ajustar saldo para ${nombre}:\nEscribe un número positivo (ej: 50 para sumar) o negativo (ej: -20 para descontar):`);
         if (montoStr !== null && montoStr.trim() !== "") {
             let cambio = parseFloat(montoStr);
             if (!isNaN(cambio)) {
                 let saldos = obtenerSaldos();
-                saldos[nombre] = Number(saldos[nombre] || 0) + cambio;
+                if (!saldos[nombre]) saldos[nombre] = 0;
+                saldos[nombre] += cambio;
                 guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
             } else {
                 alert("Por favor introduce un número válido.");
@@ -1511,9 +1517,9 @@
     }
 
     function liquidarJugadora(nombre) {
-        if (confirm(`¿Ya le pagaste o te pagó ${nombre}? Esto dejará su saldo en cero.`)) {
+        if (confirm(`¿Ya le pagaste o te pagó ${nombre}? Esto dejará su saldo en cero y la retirará de la lista.`)) {
             let saldos = obtenerSaldos();
-            saldos[nombre] = 0;
+            delete saldos[nombre];
             guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
         }
     }
@@ -1538,9 +1544,9 @@
 
         let html = "";
         keys.forEach(nombre => {
-            let valor = Number(saldos[nombre] || 0);
-            let colorEstilo = valor < 0 ? 'color: #ff4757; font-weight: bold;' : (valor > 0 ? 'color: #2ed573; font-weight: bold;' : 'color: #57606f; font-weight: bold;');
-            let textoValor = valor > 0 ? '+' + valor : valor;
+            let valor = saldos[nombre];
+            let colorEstilo = valor < 0 ? 'color: #ff4757; font-weight: bold;' : 'color: #2ed573; font-weight: bold;';
+            let textoValor = valor >= 0 ? '+' + valor : valor;
             let btnCopiar = valor > 0 ? `<button class="btn-copiar-privado" onclick="copiarSaldoPrivado(${valor})">📲 Copiar</button>` : "";
 
             html += `
@@ -1565,52 +1571,13 @@
         divHistorial.innerHTML = html;
     }
 
-    // Reinicia saldos, jugadas, premios temporales, historial y ronda (1),
-    // pero CONSERVA jugadoras_fijas y los costos configurados.
     function reiniciarDia() {
-        if (confirm("⚠️ ¿Reiniciar el día? Se borrarán saldos, jugadas, premios e historial y volverá a Ronda 1, pero se conservarán tus jugadoras fijas.")) {
+        if (confirm("⚠️ ¿Reiniciar el día? Se borrarán todos los saldos, líneas, objetos, colores, historial y la ronda volverá a 1.")) {
             let confirmacion2 = prompt("Escribe la palabra 'BORRAR' para confirmar:");
             if (confirmacion2 && confirmacion2.toUpperCase() === "BORRAR") {
-                let updates = {
-                    numero_ronda: 1,
-                    tanda_lineas: 1,
-                    saldos_jugadoras: "{}",
-                    historial_rondas_lista: "[]"
-                };
-
-                for (let i = 1; i <= totalLineas; i++) {
-                    updates['linea_ronda_' + i] = null;
-                    updates['estado_pago_linea_' + i] = null;
-                    for (let t = 1; t <= maxTandasLineas; t++) {
-                        updates['linea_ronda_' + i + '_t' + t] = null;
-                        updates['estado_pago_linea_' + i + '_t' + t] = null;
-                    }
-                }
-
-                for (let i = 1; i <= totalObjetos; i++) {
-                    updates['objeto_ronda_' + i] = null;
-                    updates['estado_pago_objeto_' + i] = null;
-                }
-
-                for (let i = 1; i <= totalColores; i++) {
-                    updates['color_ronda_' + i] = null;
-                    updates['estado_pago_color_' + i] = null;
-                }
-
-                for (let p = 1; p <= 4; p++) {
-                    updates['premio_num_def_' + p] = null;
-                    updates['premio_monto_def_' + p] = null;
-                }
-                for (let p = 1; p <= 3; p++) {
-                    updates['premio_num_obj_def_' + p] = null;
-                    updates['premio_monto_obj_def_' + p] = null;
-                    updates['premio_num_col_def_' + p] = null;
-                    updates['premio_monto_col_def_' + p] = null;
-                }
-
-                bloqueandoAccion = false;
-                dbRef.update(updates).then(() => {
-                    alert("¡Día reiniciado! Tus jugadoras fijas siguen guardadas.");
+                dbRef.remove().then(() => {
+                    alert("¡Día reiniciado con éxito!");
+                    location.reload();
                 });
             }
         }
