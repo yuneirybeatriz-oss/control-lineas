@@ -809,6 +809,7 @@
         btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
         btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
         
+        // Al pasar a pendiente (+): se suma | Al pasar a pagado (-): se descuenta
         btnPago.addEventListener('click', function() {
             if (bloqueandoAccion) return;
             let nombreJugadora = select.value;
@@ -819,14 +820,14 @@
             let saldos = obtenerSaldos();
             let updates = {};
 
-            if (estadoActual === 'pendiente') {
-                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pagado');
+            if (estadoActual === 'pagado') {
+                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pendiente');
                 if (valorLinea > 0) {
                     if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                     saldos[nombreJugadora] += valorLinea;
                 }
             } else {
-                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pendiente');
+                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pagado');
                 if (valorLinea > 0) {
                     if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                     saldos[nombreJugadora] -= valorLinea;
@@ -954,6 +955,7 @@
             btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
             
+            // Al pasar a pendiente (+): se suma | Al pasar a pagado (-): se descuenta
             btnPago.addEventListener('click', function() {
                 if (bloqueandoAccion) return;
                 let nombreJugadora = select.value;
@@ -964,14 +966,14 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                if (estadoActual === 'pendiente') {
-                    updates['estado_pago_objeto_' + i] = 'pagado';
+                if (estadoActual === 'pagado') {
+                    updates['estado_pago_objeto_' + i] = 'pendiente';
                     if (valorObjeto > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                         saldos[nombreJugadora] += valorObjeto;
                     }
                 } else {
-                    updates['estado_pago_objeto_' + i] = 'pendiente';
+                    updates['estado_pago_objeto_' + i] = 'pagado';
                     if (valorObjeto > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                         saldos[nombreJugadora] -= valorObjeto;
@@ -1056,6 +1058,7 @@
             btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
             
+            // Al pasar a pendiente (+): se suma | Al pasar a pagado (-): se descuenta
             btnPago.addEventListener('click', function() {
                 if (bloqueandoAccion) return;
                 let nombreJugadora = select.value;
@@ -1066,14 +1069,14 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                if (estadoActual === 'pendiente') {
-                    updates['estado_pago_color_' + i] = 'pagado';
+                if (estadoActual === 'pagado') {
+                    updates['estado_pago_color_' + i] = 'pendiente';
                     if (valorColor > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                         saldos[nombreJugadora] += valorColor;
                     }
                 } else {
-                    updates['estado_pago_color_' + i] = 'pendiente';
+                    updates['estado_pago_color_' + i] = 'pagado';
                     if (valorColor > 0) {
                         if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
                         saldos[nombreJugadora] -= valorColor;
