@@ -169,6 +169,31 @@
             border: 1px solid #e1e1e1;
             gap: 6px;
         }
+        .line-row-multi {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .line-multi-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .line-slot-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        .slot-badge {
+            font-size: 11px;
+            font-weight: bold;
+            color: #57606f;
+            background: #e9ecef;
+            padding: 4px 6px;
+            border-radius: 5px;
+            flex-shrink: 0;
+        }
         .line-number {
             font-weight: bold;
             font-size: 14px;
@@ -372,7 +397,7 @@
             <button class="btn-clear" onclick="limpiarLineasRonda()">🧹 Vaciar Líneas</button>
         </div>
 
-        <div class="section-title" id="titulo-lista-lineas">Asignación de las 15 Líneas</div>
+        <div class="section-title" id="titulo-lista-lineas">Asignación de las 15 Líneas (Normal)</div>
         <div id="lista-lineas"></div>
 
         <div class="section-title">Registro de Premios (Escribe el N° de Línea)</div>
@@ -688,6 +713,87 @@
         contenedorFijas.innerHTML = html;
     }
 
+    function crearSelectorTandaLinea(lineaNum, tandaNum, listaFijas) {
+        let guardado = obtenerJugadoraLinea(lineaNum, tandaNum);
+        let estadoPago = obtenerEstadoPagoLinea(lineaNum, tandaNum);
+
+        let select = document.createElement('select');
+        select.className = 'line-select';
+        select.id = `select_linea_${lineaNum}_t${tandaNum}`;
+
+        let optDefault = document.createElement('option');
+        optDefault.value = "";
+        optDefault.textContent = "-- Disponible --";
+        select.appendChild(optDefault);
+
+        listaFijas.forEach(nombre => {
+            let opt = document.createElement('option');
+            opt.value = nombre;
+            opt.textContent = nombre;
+            if (nombre === guardado) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        select.addEventListener('change', function() {
+            let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
+            let anteriorJugadora = obtenerJugadoraLinea(lineaNum, tandaNum);
+            let nuevaJugadora = select.value;
+            let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
+
+            if (anteriorJugadora !== "" && valorLinea > 0) {
+                if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
+                saldos[anteriorJugadora] += valorLinea; 
+            }
+
+            if (nuevaJugadora !== "" && valorLinea > 0) {
+                if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
+                saldos[nuevaJugadora] -= valorLinea;
+                
+                if (saldos[nuevaJugadora] >= 0) {
+                    guardarEstadoPagoLinea(lineaNum, tandaNum, 'pagado');
+                } else {
+                    guardarEstadoPagoLinea(lineaNum, tandaNum, 'pendiente');
+                }
+            }
+
+            guardarJugadoraLinea(lineaNum, tandaNum, nuevaJugadora);
+            if (nuevaJugadora === "") guardarEstadoPagoLinea(lineaNum, tandaNum, null);
+
+            guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
+        });
+
+        let btnPago = document.createElement('button');
+        btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
+        btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
+        
+        btnPago.addEventListener('click', function() {
+            let nombreJugadora = select.value;
+            if (nombreJugadora === "") { alert("Selecciona una jugadora en esta línea primero."); return; }
+
+            let estadoActual = obtenerEstadoPagoLinea(lineaNum, tandaNum);
+            let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
+            let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
+
+            if (estadoActual === 'pendiente') {
+                guardarEstadoPagoLinea(lineaNum, tandaNum, 'pagado');
+                if (valorLinea > 0) {
+                    if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                    saldos[nombreJugadora] += valorLinea; 
+                }
+            } else {
+                guardarEstadoPagoLinea(lineaNum, tandaNum, 'pendiente');
+                if (valorLinea > 0) {
+                    if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                    saldos[nombreJugadora] -= valorLinea;
+                }
+            }
+
+            guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
+        });
+
+        return { select, btnPago, guardado };
+    }
+
     // ================= RENDERIZAR LÍNEAS =================
     function renderizarLineas() {
         actualizarBotonesTanda();
@@ -697,93 +803,40 @@
         let tandaActual = obtenerTandaActual();
 
         for (let i = 1; i <= totalLineas; i++) {
-            let guardado = obtenerJugadoraLinea(i, tandaActual);
-            let estadoPago = obtenerEstadoPagoLinea(i, tandaActual);
-
             let row = document.createElement('div');
-            row.className = 'line-row';
+            row.className = tandaActual > 1 ? 'line-row line-row-multi' : 'line-row';
 
             let num = document.createElement('div');
             num.className = 'line-number';
             num.textContent = '#' + i;
 
-            let select = document.createElement('select');
-            select.className = 'line-select';
-            select.id = 'select_linea_' + i;
+            if (tandaActual === 1) {
+                let item = crearSelectorTandaLinea(i, 1, listaFijas);
+                row.appendChild(num);
+                row.appendChild(item.select);
+                if (item.guardado !== "") row.appendChild(item.btnPago);
+            } else {
+                let header = document.createElement('div');
+                header.className = 'line-multi-header';
+                header.appendChild(num);
+                row.appendChild(header);
 
-            let optDefault = document.createElement('option');
-            optDefault.value = "";
-            optDefault.textContent = "-- Disponible --";
-            select.appendChild(optDefault);
+                for (let t = 1; t <= tandaActual; t++) {
+                    let slotRow = document.createElement('div');
+                    slotRow.className = 'line-slot-row';
 
-            listaFijas.forEach(nombre => {
-                let opt = document.createElement('option');
-                opt.value = nombre;
-                opt.textContent = nombre;
-                if (nombre === guardado) opt.selected = true;
-                select.appendChild(opt);
-            });
+                    let badge = document.createElement('span');
+                    badge.className = 'slot-badge';
+                    badge.textContent = t === 1 ? '1ra' : (t === 2 ? '2da' : '3ra');
 
-            select.addEventListener('change', function() {
-                let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
-                let anteriorJugadora = obtenerJugadoraLinea(i, tandaActual);
-                let nuevaJugadora = select.value;
-                let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
-
-                if (anteriorJugadora !== "" && valorLinea > 0) {
-                    if (!saldos[anteriorJugadora]) saldos[anteriorJugadora] = 0;
-                    saldos[anteriorJugadora] += valorLinea; 
+                    let item = crearSelectorTandaLinea(i, t, listaFijas);
+                    slotRow.appendChild(badge);
+                    slotRow.appendChild(item.select);
+                    if (item.guardado !== "") slotRow.appendChild(item.btnPago);
+                    row.appendChild(slotRow);
                 }
+            }
 
-                if (nuevaJugadora !== "" && valorLinea > 0) {
-                    if (!saldos[nuevaJugadora]) saldos[nuevaJugadora] = 0;
-                    saldos[nuevaJugadora] -= valorLinea;
-                    
-                    if (saldos[nuevaJugadora] >= 0) {
-                        guardarEstadoPagoLinea(i, tandaActual, 'pagado');
-                    } else {
-                        guardarEstadoPagoLinea(i, tandaActual, 'pendiente');
-                    }
-                }
-
-                guardarJugadoraLinea(i, tandaActual, nuevaJugadora);
-                if (nuevaJugadora === "") guardarEstadoPagoLinea(i, tandaActual, null);
-
-                guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
-            });
-
-            let btnPago = document.createElement('button');
-            btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
-            btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
-            
-            btnPago.addEventListener('click', function() {
-                let nombreJugadora = select.value;
-                if (nombreJugadora === "") { alert("Selecciona una jugadora en esta línea primero."); return; }
-
-                let estadoActual = obtenerEstadoPagoLinea(i, tandaActual);
-                let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
-                let saldos = (window._dbRemota && window._dbRemota.saldos_jugadoras) ? JSON.parse(window._dbRemota.saldos_jugadoras) : {};
-
-                if (estadoActual === 'pendiente') {
-                    guardarEstadoPagoLinea(i, tandaActual, 'pagado');
-                    if (valorLinea > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] += valorLinea; 
-                    }
-                } else {
-                    guardarEstadoPagoLinea(i, tandaActual, 'pendiente');
-                    if (valorLinea > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] -= valorLinea;
-                    }
-                }
-
-                guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
-            });
-
-            row.appendChild(num);
-            row.appendChild(select);
-            if(guardado !== "") row.appendChild(btnPago);
             contenedorLineas.appendChild(row);
         }
     }
