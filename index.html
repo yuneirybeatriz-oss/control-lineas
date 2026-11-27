@@ -809,32 +809,16 @@
         btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
         btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
         
-        // Al pasar a pendiente (+): se suma | Al pasar a pagado (-): se descuenta
+        // Cambia solo el estado pagado/pendiente sin volver a restar el costo ya descontado al asignar
         btnPago.addEventListener('click', function() {
             if (bloqueandoAccion) return;
             let nombreJugadora = select.value;
             if (nombreJugadora === "") { alert("Selecciona una jugadora en esta línea primero."); return; }
 
             let estadoActual = obtenerEstadoPagoLinea(lineaNum, tandaNum);
-            let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
-            let saldos = obtenerSaldos();
+            let nuevoEstado = estadoActual === 'pagado' ? 'pendiente' : 'pagado';
             let updates = {};
-
-            if (estadoActual === 'pagado') {
-                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pendiente');
-                if (valorLinea > 0) {
-                    if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                    saldos[nombreJugadora] += valorLinea;
-                }
-            } else {
-                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pagado');
-                if (valorLinea > 0) {
-                    if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                    saldos[nombreJugadora] -= valorLinea;
-                }
-            }
-
-            updates['saldos_jugadoras'] = JSON.stringify(saldos);
+            setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, nuevoEstado);
             guardarLoteFirebase(updates);
         });
 
@@ -955,33 +939,14 @@
             btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
             
-            // Al pasar a pendiente (+): se suma | Al pasar a pagado (-): se descuenta
             btnPago.addEventListener('click', function() {
                 if (bloqueandoAccion) return;
                 let nombreJugadora = select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este objeto primero."); return; }
 
                 let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
-                let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
-                let saldos = obtenerSaldos();
-                let updates = {};
-
-                if (estadoActual === 'pagado') {
-                    updates['estado_pago_objeto_' + i] = 'pendiente';
-                    if (valorObjeto > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] += valorObjeto;
-                    }
-                } else {
-                    updates['estado_pago_objeto_' + i] = 'pagado';
-                    if (valorObjeto > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] -= valorObjeto;
-                    }
-                }
-
-                updates['saldos_jugadoras'] = JSON.stringify(saldos);
-                guardarLoteFirebase(updates);
+                let nuevoEstado = estadoActual === 'pagado' ? 'pendiente' : 'pagado';
+                guardarEnFirebase('estado_pago_objeto_' + i, nuevoEstado);
             });
 
             row.appendChild(num);
@@ -1058,33 +1023,14 @@
             btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
             btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
             
-            // Al pasar a pendiente (+): se suma | Al pasar a pagado (-): se descuenta
             btnPago.addEventListener('click', function() {
                 if (bloqueandoAccion) return;
                 let nombreJugadora = select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este color primero."); return; }
 
                 let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
-                let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
-                let saldos = obtenerSaldos();
-                let updates = {};
-
-                if (estadoActual === 'pagado') {
-                    updates['estado_pago_color_' + i] = 'pendiente';
-                    if (valorColor > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] += valorColor;
-                    }
-                } else {
-                    updates['estado_pago_color_' + i] = 'pagado';
-                    if (valorColor > 0) {
-                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
-                        saldos[nombreJugadora] -= valorColor;
-                    }
-                }
-
-                updates['saldos_jugadoras'] = JSON.stringify(saldos);
-                guardarLoteFirebase(updates);
+                let nuevoEstado = estadoActual === 'pagado' ? 'pendiente' : 'pagado';
+                guardarEnFirebase('estado_pago_color_' + i, nuevoEstado);
             });
 
             row.appendChild(num);
