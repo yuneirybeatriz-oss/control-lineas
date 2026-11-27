@@ -382,7 +382,7 @@
     <div id="seccion-lineas">
         <div class="config-box">
             <label>Costo de cada Línea:</label>
-            <input type="number" id="valor_linea_config" placeholder="Ej: 1000" oninput="guardarValorLinea()">
+            <input type="number" id="valor_linea_config" placeholder="Ej: 1000" onchange="guardarValorLinea()" oninput="guardarValorLinea()">
         </div>
 
         <!-- SELECTOR NORMAL / DOBLE / TRIPLE -->
@@ -434,7 +434,7 @@
     <div id="seccion-objetos" style="display: none;">
         <div class="config-box">
             <label>Costo de cada Objeto:</label>
-            <input type="number" id="valor_objeto_config" placeholder="Ej: 1000" oninput="guardarValorObjeto()">
+            <input type="number" id="valor_objeto_config" placeholder="Ej: 1000" onchange="guardarValorObjeto()" oninput="guardarValorObjeto()">
         </div>
 
         <div class="actions-top" style="margin-top: 15px;">
@@ -473,7 +473,7 @@
     <div id="seccion-colores" style="display: none;">
         <div class="config-box">
             <label>Costo de cada Color:</label>
-            <input type="number" id="valor_color_config" placeholder="Ej: 1000" oninput="guardarValorColor()">
+            <input type="number" id="valor_color_config" placeholder="Ej: 1000" onchange="guardarValorColor()" oninput="guardarValorColor()">
         </div>
 
         <div class="actions-top" style="margin-top: 15px;">
@@ -522,12 +522,11 @@
 
     <!-- ZONA DE PELIGRO -->
     <div class="danger-zone">
-        <button class="btn-reset-day" onclick="reiniciarDia()">⚠️ Reiniciar Día (Borrar Todo y Saldos)</button>
+        <button class="btn-reset-day" onclick="reiniciarDia()">⚠️ Reiniciar Día (Conserva Jugadoras)</button>
     </div>
 </div>
 
 <script>
-    // CONFIGURACIÓN DE FIREBASE USANDO TU MISMO PROYECTO
     const firebaseConfig = {
         databaseURL: "https://bingo-lineal-yune-default-rtdb.firebaseio.com/"
     };
@@ -540,7 +539,9 @@
     const totalLineas = 15;
     const totalObjetos = 20;
     const totalColores = 10;
-    const maxTandasLineas = 3; // Normal (1), Doble (2), Triple (3)
+    const maxTandasLineas = 3;
+
+    window._dbRemota = {};
     
     const listaObjetosNombres = [
         "1 🪜 La Escalera", "2 💍 El Anillo", "3 🔑 La Llave", "4 ⭐ La Estrella",
@@ -555,23 +556,36 @@
         "🟣 Morado", "🩷 Rosado", "🩵 Celeste", "🟤 Marrón", "⚪ Blanco"
     ];
 
-    // CARGA DE DATOS EN TIEMPO REAL DESDE FIREBASE
     dbRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        if (data) {
-            window._dbRemota = data;
-        } else {
-            window._dbRemota = {};
-        }
+        window._dbRemota = data || {};
         actualizarTodoLocal();
     });
 
     function guardarEnFirebase(clave, valor) {
+        window._dbRemota[clave] = valor;
         dbRef.child(clave).set(valor);
     }
 
     function guardarLoteFirebase(updates) {
+        Object.keys(updates).forEach(k => {
+            if (updates[k] === null) {
+                delete window._dbRemota[k];
+            } else {
+                window._dbRemota[k] = updates[k];
+            }
+        });
+        actualizarTodoLocal();
         dbRef.update(updates);
+    }
+
+    function leerCostoSeguro(inputId, claveRemota) {
+        const el = document.getElementById(inputId);
+        const valInput = el ? parseFloat(el.value) : NaN;
+        if (!isNaN(valInput) && valInput > 0) return valInput;
+        const valRemoto = window._dbRemota ? parseFloat(window._dbRemota[claveRemota]) : NaN;
+        if (!isNaN(valRemoto) && valRemoto > 0) return valRemoto;
+        return 0;
     }
 
     function obtenerSaldos() {
@@ -590,27 +604,29 @@
         }
     }
 
-    // Asignar = descuenta (-) | Quitar / poner en "-- Disponible --" = devuelve (+)
     function descontarJugada(saldos, jugadora, costo) {
         if (jugadora !== "" && costo > 0) {
-            if (!saldos[jugadora]) saldos[jugadora] = 0;
+            if (typeof saldos[jugadora] !== 'number' || isNaN(saldos[jugadora])) {
+                saldos[jugadora] = 0;
+            }
             saldos[jugadora] -= costo;
-            return saldos[jugadora] >= 0 ? 'pagado' : 'pendiente';
         }
-        return 'pendiente';
     }
 
-    function devolverJugada(saldos, jugadora, costo) {
-        if (jugadora !== "" && costo > 0) {
-            if (!saldos[jugadora]) saldos[jugadora] = 0;
+    function devolverJugadaPendiente(saldos, jugadora, estadoPago, costo) {
+        if (jugadora !== "" && costo > 0 && estadoPago !== 'pagado') {
+            if (typeof saldos[jugadora] !== 'number' || isNaN(saldos[jugadora])) {
+                saldos[jugadora] = 0;
+            }
             saldos[jugadora] += costo;
         }
     }
 
-    // Premio = suma directo (+) al saldo de la jugadora ganadora
     function acreditarPremio(saldos, jugadora, monto) {
         if (jugadora !== "" && monto > 0) {
-            if (!saldos[jugadora]) saldos[jugadora] = 0;
+            if (typeof saldos[jugadora] !== 'number' || isNaN(saldos[jugadora])) {
+                saldos[jugadora] = 0;
+            }
             saldos[jugadora] += monto;
         }
     }
@@ -709,12 +725,41 @@
         document.getElementById('display-ronda').textContent = `RONDA ${obtenerRondaActual()}`; 
     }
 
-    function guardarValorLinea() { guardarEnFirebase('valor_linea_costo', document.getElementById('valor_linea_config').value); }
-    function cargarValorLinea() { document.getElementById('valor_linea_config').value = (window._dbRemota && window._dbRemota.valor_linea_costo) || ''; }
-    function guardarValorObjeto() { guardarEnFirebase('valor_objeto_costo', document.getElementById('valor_objeto_config').value); }
-    function cargarValorObjeto() { document.getElementById('valor_objeto_config').value = (window._dbRemota && window._dbRemota.valor_objeto_costo) || ''; }
-    function guardarValorColor() { guardarEnFirebase('valor_color_costo', document.getElementById('valor_color_config').value); }
-    function cargarValorColor() { document.getElementById('valor_color_config').value = (window._dbRemota && window._dbRemota.valor_color_costo) || ''; }
+    function guardarValorLinea() {
+        const val = document.getElementById('valor_linea_config').value;
+        window._dbRemota.valor_linea_costo = val;
+        dbRef.child('valor_linea_costo').set(val);
+    }
+    function cargarValorLinea() {
+        const el = document.getElementById('valor_linea_config');
+        if (document.activeElement !== el) {
+            el.value = (window._dbRemota && window._dbRemota.valor_linea_costo) || '';
+        }
+    }
+
+    function guardarValorObjeto() {
+        const val = document.getElementById('valor_objeto_config').value;
+        window._dbRemota.valor_objeto_costo = val;
+        dbRef.child('valor_objeto_costo').set(val);
+    }
+    function cargarValorObjeto() {
+        const el = document.getElementById('valor_objeto_config');
+        if (document.activeElement !== el) {
+            el.value = (window._dbRemota && window._dbRemota.valor_objeto_costo) || '';
+        }
+    }
+
+    function guardarValorColor() {
+        const val = document.getElementById('valor_color_config').value;
+        window._dbRemota.valor_color_costo = val;
+        dbRef.child('valor_color_costo').set(val);
+    }
+    function cargarValorColor() {
+        const el = document.getElementById('valor_color_config');
+        if (document.activeElement !== el) {
+            el.value = (window._dbRemota && window._dbRemota.valor_color_costo) || '';
+        }
+    }
 
     function obtenerJugadorasFijas() { 
         return (window._dbRemota && window._dbRemota.jugadoras_fijas) ? JSON.parse(window._dbRemota.jugadoras_fijas) : []; 
@@ -777,22 +822,24 @@
         });
 
         select.addEventListener('change', function() {
-            let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
+            let valorLinea = leerCostoSeguro('valor_linea_config', 'valor_linea_costo');
             let anteriorJugadora = guardado;
             let nuevaJugadora = select.value;
+
+            if (nuevaJugadora !== "" && valorLinea <= 0) {
+                alert("Escribe primero el 'Costo de cada Línea' (por ejemplo 1000) para que pueda descontar.");
+            }
+
             let saldos = obtenerSaldos();
             let updates = {};
 
-            devolverJugada(saldos, anteriorJugadora, valorLinea);
+            devolverJugadaPendiente(saldos, anteriorJugadora, estadoPago, valorLinea);
 
             if (nuevaJugadora === "") {
                 setLineaUpdates(updates, lineaNum, tandaNum, null, null);
             } else {
-                let nuevoEstado = estadoPago;
-                if (valorLinea > 0) {
-                    nuevoEstado = descontarJugada(saldos, nuevaJugadora, valorLinea);
-                }
-                setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, nuevoEstado);
+                descontarJugada(saldos, nuevaJugadora, valorLinea);
+                setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, 'pendiente');
             }
 
             updates['saldos_jugadoras'] = JSON.stringify(saldos);
@@ -803,15 +850,30 @@
         btnPago.className = 'btn-pago ' + (estadoPago === 'pagado' ? 'pago-pagado' : 'pago-pendiente');
         btnPago.innerHTML = estadoPago === 'pagado' ? '&#10004;' : '&#8635;';
         
-        // Solo alterna la marca visual/de estado (pagado <-> pendiente) sin tocar el saldo
         btnPago.addEventListener('click', function() {
             let nombreJugadora = select.value;
             if (nombreJugadora === "") { alert("Selecciona una jugadora en esta línea primero."); return; }
 
+            let valorLinea = leerCostoSeguro('valor_linea_config', 'valor_linea_costo');
             let estadoActual = obtenerEstadoPagoLinea(lineaNum, tandaNum);
-            let nuevoEstado = estadoActual === 'pagado' ? 'pendiente' : 'pagado';
+            let saldos = obtenerSaldos();
             let updates = {};
-            setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, nuevoEstado);
+
+            if (estadoActual !== 'pagado') {
+                if (valorLinea > 0) {
+                    if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                    saldos[nombreJugadora] += valorLinea;
+                }
+                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pagado');
+            } else {
+                if (valorLinea > 0) {
+                    if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                    saldos[nombreJugadora] -= valorLinea;
+                }
+                setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, 'pendiente');
+            }
+
+            updates['saldos_jugadoras'] = JSON.stringify(saldos);
             guardarLoteFirebase(updates);
         });
 
@@ -903,24 +965,26 @@
             });
 
             select.addEventListener('change', function() {
-                let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
+                let valorObjeto = leerCostoSeguro('valor_objeto_config', 'valor_objeto_costo');
                 let anteriorJugadora = guardado;
                 let nuevaJugadora = select.value;
+
+                if (nuevaJugadora !== "" && valorObjeto <= 0) {
+                    alert("Escribe primero el 'Costo de cada Objeto' (por ejemplo 1000) para que pueda descontar.");
+                }
+
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                devolverJugada(saldos, anteriorJugadora, valorObjeto);
+                devolverJugadaPendiente(saldos, anteriorJugadora, estadoPago, valorObjeto);
 
                 if (nuevaJugadora === "") {
                     updates['objeto_ronda_' + i] = null;
                     updates['estado_pago_objeto_' + i] = null;
                 } else {
-                    let nuevoEstado = estadoPago;
-                    if (valorObjeto > 0) {
-                        nuevoEstado = descontarJugada(saldos, nuevaJugadora, valorObjeto);
-                    }
+                    descontarJugada(saldos, nuevaJugadora, valorObjeto);
                     updates['objeto_ronda_' + i] = nuevaJugadora;
-                    updates['estado_pago_objeto_' + i] = nuevoEstado;
+                    updates['estado_pago_objeto_' + i] = 'pendiente';
                 }
 
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
@@ -935,9 +999,27 @@
                 let nombreJugadora = select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este objeto primero."); return; }
 
+                let valorObjeto = leerCostoSeguro('valor_objeto_config', 'valor_objeto_costo');
                 let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
-                let nuevoEstado = estadoActual === 'pagado' ? 'pendiente' : 'pagado';
-                guardarEnFirebase('estado_pago_objeto_' + i, nuevoEstado);
+                let saldos = obtenerSaldos();
+                let updates = {};
+
+                if (estadoActual !== 'pagado') {
+                    if (valorObjeto > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] += valorObjeto;
+                    }
+                    updates['estado_pago_objeto_' + i] = 'pagado';
+                } else {
+                    if (valorObjeto > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] -= valorObjeto;
+                    }
+                    updates['estado_pago_objeto_' + i] = 'pendiente';
+                }
+
+                updates['saldos_jugadoras'] = JSON.stringify(saldos);
+                guardarLoteFirebase(updates);
             });
 
             row.appendChild(num);
@@ -985,24 +1067,26 @@
             });
 
             select.addEventListener('change', function() {
-                let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
+                let valorColor = leerCostoSeguro('valor_color_config', 'valor_color_costo');
                 let anteriorJugadora = guardado;
                 let nuevaJugadora = select.value;
+
+                if (nuevaJugadora !== "" && valorColor <= 0) {
+                    alert("Escribe primero el 'Costo de cada Color' (por ejemplo 1000) para que pueda descontar.");
+                }
+
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                devolverJugada(saldos, anteriorJugadora, valorColor);
+                devolverJugadaPendiente(saldos, anteriorJugadora, estadoPago, valorColor);
 
                 if (nuevaJugadora === "") {
                     updates['color_ronda_' + i] = null;
                     updates['estado_pago_color_' + i] = null;
                 } else {
-                    let nuevoEstado = estadoPago;
-                    if (valorColor > 0) {
-                        nuevoEstado = descontarJugada(saldos, nuevaJugadora, valorColor);
-                    }
+                    descontarJugada(saldos, nuevaJugadora, valorColor);
                     updates['color_ronda_' + i] = nuevaJugadora;
-                    updates['estado_pago_color_' + i] = nuevoEstado;
+                    updates['estado_pago_color_' + i] = 'pendiente';
                 }
 
                 updates['saldos_jugadoras'] = JSON.stringify(saldos);
@@ -1017,9 +1101,27 @@
                 let nombreJugadora = select.value;
                 if (nombreJugadora === "") { alert("Selecciona una jugadora en este color primero."); return; }
 
+                let valorColor = leerCostoSeguro('valor_color_config', 'valor_color_costo');
                 let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
-                let nuevoEstado = estadoActual === 'pagado' ? 'pendiente' : 'pagado';
-                guardarEnFirebase('estado_pago_color_' + i, nuevoEstado);
+                let saldos = obtenerSaldos();
+                let updates = {};
+
+                if (estadoActual !== 'pagado') {
+                    if (valorColor > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] += valorColor;
+                    }
+                    updates['estado_pago_color_' + i] = 'pagado';
+                } else {
+                    if (valorColor > 0) {
+                        if (!saldos[nombreJugadora]) saldos[nombreJugadora] = 0;
+                        saldos[nombreJugadora] -= valorColor;
+                    }
+                    updates['estado_pago_color_' + i] = 'pendiente';
+                }
+
+                updates['saldos_jugadoras'] = JSON.stringify(saldos);
+                guardarLoteFirebase(updates);
             });
 
             row.appendChild(num);
@@ -1029,7 +1131,6 @@
         }
     }
 
-    // ================= BUSCAR NOMBRE POR NÚMERO DE LÍNEA / OBJETO / COLOR =================
     function obtenerJugadasDeLineaEnRonda(idx) {
         let jugadas = [];
         for (let t = 1; t <= maxTandasLineas; t++) {
@@ -1139,7 +1240,6 @@
         mostrarHistorialRondas();
     }
 
-    // ================= COPIAR WHATSAPP =================
     function copiarWhatsApp() {
         let rondaActual = obtenerRondaActual();
         let tandaActual = obtenerTandaActual();
@@ -1243,14 +1343,15 @@
 
     function limpiarLineasRonda() {
         if (confirm("¿Vaciar las líneas de esta ronda (incluyendo Doble/Triple)?")) {
-            let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
+            let valorLinea = leerCostoSeguro('valor_linea_config', 'valor_linea_costo');
             let saldos = obtenerSaldos();
             let updates = {};
 
             for (let i = 1; i <= totalLineas; i++) {
                 for (let t = 1; t <= maxTandasLineas; t++) {
                     let jug = obtenerJugadoraLinea(i, t);
-                    devolverJugada(saldos, jug, valorLinea);
+                    let est = obtenerEstadoPagoLinea(i, t);
+                    devolverJugadaPendiente(saldos, jug, est, valorLinea);
                     setLineaUpdates(updates, i, t, null, null);
                 }
             }
@@ -1261,13 +1362,14 @@
 
     function limpiarObjetosRonda() {
         if (confirm("¿Vaciar los 20 objetos de esta ronda?")) {
-            let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
+            let valorObjeto = leerCostoSeguro('valor_objeto_config', 'valor_objeto_costo');
             let saldos = obtenerSaldos();
             let updates = {};
 
             for (let i = 1; i <= totalObjetos; i++) {
                 let jug = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
-                devolverJugada(saldos, jug, valorObjeto);
+                let est = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
+                devolverJugadaPendiente(saldos, jug, est, valorObjeto);
                 updates['objeto_ronda_' + i] = null;
                 updates['estado_pago_objeto_' + i] = null;
             }
@@ -1278,13 +1380,14 @@
 
     function limpiarColoresRonda() {
         if (confirm("¿Vaciar los 10 colores de esta ronda?")) {
-            let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
+            let valorColor = leerCostoSeguro('valor_color_config', 'valor_color_costo');
             let saldos = obtenerSaldos();
             let updates = {};
 
             for (let i = 1; i <= totalColores; i++) {
                 let jug = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
-                devolverJugada(saldos, jug, valorColor);
+                let est = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
+                devolverJugadaPendiente(saldos, jug, est, valorColor);
                 updates['color_ronda_' + i] = null;
                 updates['estado_pago_color_' + i] = null;
             }
@@ -1293,7 +1396,6 @@
         }
     }
 
-    // ================= GUARDAR RONDA Y SUMAR PREMIOS =================
     function guardarRonda() {
         let saldos = obtenerSaldos();
         let historial = (window._dbRemota && window._dbRemota.historial_rondas_lista) ? JSON.parse(window._dbRemota.historial_rondas_lista) : [];
@@ -1519,11 +1621,24 @@
     }
 
     function reiniciarDia() {
-        if (confirm("⚠️ ¿Reiniciar el día? Se borrarán todos los saldos, líneas, objetos, colores, historial y la ronda volverá a 1.")) {
+        if (confirm("⚠️ ¿Reiniciar el día? Se borrarán los saldos, jugadas e historial y volverá a Ronda 1, pero se conservarán tus jugadoras habituales.")) {
             let confirmacion2 = prompt("Escribe la palabra 'BORRAR' para confirmar:");
             if (confirmacion2 && confirmacion2.toUpperCase() === "BORRAR") {
+                const jugadorasRespaldo = window._dbRemota && window._dbRemota.jugadoras_fijas ? window._dbRemota.jugadoras_fijas : null;
+                const costoLineaRespaldo = window._dbRemota && window._dbRemota.valor_linea_costo ? window._dbRemota.valor_linea_costo : null;
+                const costoObjRespaldo = window._dbRemota && window._dbRemota.valor_objeto_costo ? window._dbRemota.valor_objeto_costo : null;
+                const costoColRespaldo = window._dbRemota && window._dbRemota.valor_color_costo ? window._dbRemota.valor_color_costo : null;
+
                 dbRef.remove().then(() => {
-                    alert("¡Día reiniciado con éxito!");
+                    const restaurar = { numero_ronda: 1, tanda_lineas: 1 };
+                    if (jugadorasRespaldo) restaurar.jugadoras_fijas = jugadorasRespaldo;
+                    if (costoLineaRespaldo) restaurar.valor_linea_costo = costoLineaRespaldo;
+                    if (costoObjRespaldo) restaurar.valor_objeto_costo = costoObjRespaldo;
+                    if (costoColRespaldo) restaurar.valor_color_costo = costoColRespaldo;
+
+                    return dbRef.update(restaurar);
+                }).then(() => {
+                    alert("¡Día reiniciado! Tus jugadoras habituales se mantuvieron intactas.");
                     location.reload();
                 });
             }
