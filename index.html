@@ -589,40 +589,42 @@
         }
     }
 
-    // Al asignar: SIEMPRE RESTA el costo (queda negativo si no tenía saldo a favor)
+    // Al asignar:
+    // - Siempre descuenta el costo (saldoActual - costoNum).
+    // - Si tenía saldo positivo (saldoActual > 0) y costoNum > 0: queda 'pagado' directo (verde ✔️ y ✔️ en WhatsApp).
+    // - Si no tenía saldo positivo: queda 'pendiente' (↻ y ❌ en WhatsApp).
     function asignarJugadaRestando(saldos, jugadora, costo) {
         if (!jugadora) return 'pendiente';
         let saldoActual = Number(saldos[jugadora] || 0);
         let costoNum = Math.abs(Number(costo || 0));
         if (costoNum > 0) {
             saldos[jugadora] = saldoActual - costoNum;
+            if (saldoActual > 0) {
+                return 'pagado';
+            }
         }
         return 'pendiente';
     }
 
-    // Al quitar de la línea o vaciar: devuelve lo que se había restado
+    // Al quitar de la línea o vaciar: devuelve lo que se había descontado
     function revertirAsignacion(saldos, jugadora, estadoAnterior, costo) {
         let costoNum = Math.abs(Number(costo || 0));
         if (!jugadora || !costoNum) return;
         let saldoActual = Number(saldos[jugadora] || 0);
-        if (estadoAnterior === 'pendiente') {
-            saldos[jugadora] = saldoActual + costoNum;
-        }
+        saldos[jugadora] = saldoActual + costoNum;
     }
 
-    // Al marcar como pagado ('pagado'): SUMA el costo para que suba a 0
-    // Si se desmarca ('pendiente'): RESTA el costo otra vez
+    // Al pulsar el botón de pago:
+    // - Si estaba 'pendiente' -> pasa a 'pagado' sin volver a sumar (ya que al asignar desde saldo <= 0 se descontó; al marcar pagado se cierra el cobro).
+    // - Si estaba 'pagado' -> pasa a 'pendiente' y devuelve el costo al saldo.
     function alternarPagoJugada(saldos, jugadora, estadoActual, costo) {
         let costoNum = Math.abs(Number(costo || 0));
         let saldoActual = Number(saldos[jugadora] || 0);
         if (estadoActual === 'pendiente') {
-            if (costoNum > 0) {
-                saldos[jugadora] = saldoActual + costoNum;
-            }
             return 'pagado';
         } else {
             if (costoNum > 0) {
-                saldos[jugadora] = saldoActual - costoNum;
+                saldos[jugadora] = saldoActual + costoNum;
             }
             return 'pendiente';
         }
