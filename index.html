@@ -171,9 +171,9 @@
         }
         .line-number {
             font-weight: bold;
-            font-size: 13px;
+            font-size: 14px;
             color: var(--primary);
-            min-width: 58px;
+            min-width: 34px;
             flex-shrink: 0;
         }
         .line-select {
@@ -362,9 +362,9 @@
 
         <!-- SELECTOR NORMAL / DOBLE / TRIPLE -->
         <div class="tanda-selector">
-            <button id="btn-tanda-1" class="btn-tanda active-tanda" onclick="cambiarTandaLineas(1)">Normal (1)</button>
-            <button id="btn-tanda-2" class="btn-tanda" onclick="cambiarTandaLineas(2)">Doble (2)</button>
-            <button id="btn-tanda-3" class="btn-tanda" onclick="cambiarTandaLineas(3)">Triple (3)</button>
+            <button id="btn-tanda-1" class="btn-tanda active-tanda" onclick="cambiarTandaLineas(1)">Normal</button>
+            <button id="btn-tanda-2" class="btn-tanda" onclick="cambiarTandaLineas(2)">Doble</button>
+            <button id="btn-tanda-3" class="btn-tanda" onclick="cambiarTandaLineas(3)">Triple</button>
         </div>
 
         <div class="actions-top" style="margin-top: 10px;">
@@ -372,7 +372,7 @@
             <button class="btn-clear" onclick="limpiarLineasRonda()">🧹 Vaciar Líneas</button>
         </div>
 
-        <div class="section-title" id="titulo-lista-lineas">Asignación de las 15 Líneas (Tanda 1)</div>
+        <div class="section-title" id="titulo-lista-lineas">Asignación de las 15 Líneas</div>
         <div id="lista-lineas"></div>
 
         <div class="section-title">Registro de Premios (Escribe el N° de Línea)</div>
@@ -566,12 +566,11 @@
         }
         let titulo = document.getElementById('titulo-lista-lineas');
         if (titulo) {
-            let etiqueta = tandaActual === 1 ? 'Normal (1)' : (tandaActual === 2 ? 'Doble (2)' : 'Triple (3)');
-            titulo.textContent = `Asignación de las 15 Líneas — ${etiqueta}`;
+            let etiqueta = tandaActual === 1 ? 'Normal' : (tandaActual === 2 ? 'Doble' : 'Triple');
+            titulo.textContent = `Asignación de las 15 Líneas (${etiqueta})`;
         }
     }
 
-    // Lee jugadora de una línea y tanda (mantiene compatibilidad con formato antiguo de tanda 1)
     function obtenerJugadoraLinea(lineaNum, tandaNum) {
         if (!window._dbRemota) return '';
         if (tandaNum === 1) {
@@ -689,7 +688,7 @@
         contenedorFijas.innerHTML = html;
     }
 
-    // ================= RENDERIZAR LÍNEAS (SOPORTA NORMAL / DOBLE / TRIPLE) =================
+    // ================= RENDERIZAR LÍNEAS =================
     function renderizarLineas() {
         actualizarBotonesTanda();
         let contenedorLineas = document.getElementById('lista-lineas');
@@ -706,7 +705,7 @@
 
             let num = document.createElement('div');
             num.className = 'line-number';
-            num.textContent = `#${i} (T${tandaActual})`;
+            num.textContent = '#' + i;
 
             let select = document.createElement('select');
             select.className = 'line-select';
@@ -1108,29 +1107,54 @@
         let valorLinea = document.getElementById('valor_linea_config').value;
         let etiquetaTanda = tandaActual === 1 ? 'Normal' : (tandaActual === 2 ? 'Doble' : 'Triple');
         let texto = `📋 *LISTA DE LÍNEAS - RONDA ${rondaActual} (${etiquetaTanda})* 📋\n`;
-        if(valorLinea) texto += `_Costo de línea: ${valorLinea}_\n\n`;
+        if (valorLinea) texto += `_Costo de línea: ${valorLinea}_\n\n`;
         else texto += `\n`;
 
-        let asignadas = 0;
+        let lineasConJugadora = 0;
+        let totalJugadas = 0;
+
         for (let i = 1; i <= totalLineas; i++) {
-            let partes = [];
+            let entradas = [];
             for (let t = 1; t <= tandaActual; t++) {
                 let val = obtenerJugadoraLinea(i, t).trim();
                 if (val !== "") {
                     let estado = obtenerEstadoPagoLinea(i, t);
                     let iconoEstado = (estado === 'pagado') ? '✔️' : '❌';
-                    partes.push(tandaActual > 1 ? `T${t}: *${val}* ${iconoEstado}` : `*${val}* ${iconoEstado}`);
-                    asignadas++;
+                    entradas.push({ nombre: val, icono: iconoEstado, tanda: t });
+                    totalJugadas++;
                 }
             }
-            if (partes.length > 0) {
-                texto += `${i} - ${partes.join(' | ')}\n`;
+
+            if (entradas.length > 0) {
+                lineasConJugadora++;
+                let mismaPersonaEnTodas = entradas.length > 1 && entradas.every(e => e.nombre === entradas[0].nombre);
+
+                if (mismaPersonaEnTodas) {
+                    let etiquetaRep = entradas.length === 2 ? 'Doble' : 'Triple';
+                    let todosPagados = entradas.every(e => e.icono === '✔️');
+                    let iconoFinal = todosPagados ? '✔️' : '❌';
+                    texto += `${i} - *${entradas[0].nombre}* (${etiquetaRep}) ${iconoFinal}\n`;
+                } else {
+                    let partes = entradas.map(e => {
+                        if (tandaActual > 1) {
+                            let orden = e.tanda === 1 ? '1ra' : (e.tanda === 2 ? '2da' : '3ra');
+                            return `${orden}: *${e.nombre}* ${e.icono}`;
+                        }
+                        return `*${e.nombre}* ${e.icono}`;
+                    });
+                    texto += `${i} - ${partes.join(' | ')}\n`;
+                }
             } else {
                 texto += `${i} - _Disponible_\n`;
             }
         }
-        let cuposTotales = totalLineas * tandaActual;
-        texto += `\nTotal asignadas: ${asignadas}/${cuposTotales}`;
+
+        if (tandaActual > 1) {
+            texto += `\nLíneas tomadas: ${lineasConJugadora}/${totalLineas} (${totalJugadas} jugadas)`;
+        } else {
+            texto += `\nTotal asignadas: ${lineasConJugadora}/${totalLineas}`;
+        }
+
         navigator.clipboard.writeText(texto).then(() => { alert("¡Lista de líneas copiada para WhatsApp!"); });
     }
 
