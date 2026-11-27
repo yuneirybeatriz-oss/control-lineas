@@ -576,8 +576,8 @@
             : {};
     }
 
-    // Guarda el impacto exacto que esta jugada aplica actualmente al saldo de la jugadora:
-    // +monto si la jugada está pagada ('pagado'), -monto si está pendiente ('pendiente'), o 0 si no aplica.
+    // Si está pendiente (no pagado): suma (+costoUnitario).
+    // Si está pagado ('pagado'): descuenta (-costoUnitario).
     function obtenerImpactoGuardado(claveBase) {
         if (!window._dbRemota) return null;
         return window._dbRemota['impacto_' + claveBase] || null;
@@ -598,7 +598,7 @@
 
         let nuevoDelta = 0;
         if (jugadora && jugadora !== "" && costoUnitario > 0) {
-            nuevoDelta = (estadoPago === 'pagado') ? costoUnitario : -costoUnitario;
+            nuevoDelta = (estadoPago === 'pagado') ? -costoUnitario : costoUnitario;
             if (!saldos[jugadora]) saldos[jugadora] = 0;
             saldos[jugadora] += nuevoDelta;
             guardarImpactoGuardado(claveBase, { jugadora: jugadora, delta: nuevoDelta });
@@ -782,13 +782,9 @@
                 guardarJugadoraLinea(lineaNum, tandaNum, "");
                 guardarEstadoPagoLinea(lineaNum, tandaNum, null);
             } else {
-                let estadoAUsar = 'pendiente';
-                if (valorLinea > 0 && (saldos[nuevaJugadora] || 0) >= valorLinea) {
-                    estadoAUsar = 'pagado';
-                }
                 guardarJugadoraLinea(lineaNum, tandaNum, nuevaJugadora);
-                guardarEstadoPagoLinea(lineaNum, tandaNum, estadoAUsar);
-                aplicarCambioJugadaSaldo(saldos, claveBase, nuevaJugadora, estadoAUsar, valorLinea);
+                guardarEstadoPagoLinea(lineaNum, tandaNum, 'pendiente');
+                aplicarCambioJugadaSaldo(saldos, claveBase, nuevaJugadora, 'pendiente', valorLinea);
             }
 
             guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
@@ -910,13 +906,9 @@
                     guardarEnFirebase('objeto_ronda_' + i, "");
                     guardarEnFirebase('estado_pago_objeto_' + i, null);
                 } else {
-                    let estadoAUsar = 'pendiente';
-                    if (valorObjeto > 0 && (saldos[nuevaJugadora] || 0) >= valorObjeto) {
-                        estadoAUsar = 'pagado';
-                    }
                     guardarEnFirebase('objeto_ronda_' + i, nuevaJugadora);
-                    guardarEnFirebase('estado_pago_objeto_' + i, estadoAUsar);
-                    aplicarCambioJugadaSaldo(saldos, claveBase, nuevaJugadora, estadoAUsar, valorObjeto);
+                    guardarEnFirebase('estado_pago_objeto_' + i, 'pendiente');
+                    aplicarCambioJugadaSaldo(saldos, claveBase, nuevaJugadora, 'pendiente', valorObjeto);
                 }
 
                 guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
@@ -995,13 +987,9 @@
                     guardarEnFirebase('color_ronda_' + i, "");
                     guardarEnFirebase('estado_pago_color_' + i, null);
                 } else {
-                    let estadoAUsar = 'pendiente';
-                    if (valorColor > 0 && (saldos[nuevaJugadora] || 0) >= valorColor) {
-                        estadoAUsar = 'pagado';
-                    }
                     guardarEnFirebase('color_ronda_' + i, nuevaJugadora);
-                    guardarEnFirebase('estado_pago_color_' + i, estadoAUsar);
-                    aplicarCambioJugadaSaldo(saldos, claveBase, nuevaJugadora, estadoAUsar, valorColor);
+                    guardarEnFirebase('estado_pago_color_' + i, 'pendiente');
+                    aplicarCambioJugadaSaldo(saldos, claveBase, nuevaJugadora, 'pendiente', valorColor);
                 }
 
                 guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
