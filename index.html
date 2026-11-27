@@ -382,7 +382,7 @@
     <div id="seccion-lineas">
         <div class="config-box">
             <label>Costo de cada Línea:</label>
-            <input type="number" id="valor_linea_config" placeholder="Ej: 5" oninput="guardarValorLinea()">
+            <input type="number" id="valor_linea_config" placeholder="Ej: 3000" oninput="guardarValorLinea()">
         </div>
 
         <!-- SELECTOR NORMAL / DOBLE / TRIPLE -->
@@ -580,32 +580,27 @@
             : {};
     }
 
-    // Regla corregida:
-    // - Sin pagar / pendiente: SUMA (+costo)
-    // - Pagado ('pagado'): RESTA (-costo)
-    function efectoEstado(estado, costo) {
-        if (!costo) return 0;
-        return (estado === 'pagado') ? -costo : costo;
-    }
-
+    // Movimiento simple de 1 vez el costo (sin saltos dobles):
+    // - Asignar jugada (pendiente): +costo
+    // - Marcar pagado ('pagado'): -costo
+    // - Quitar pagado (vuelve a pendiente): +costo
+    // - Quitar jugada: si estaba pendiente resta -costo; si estaba pagada suma +costo
     function alAsignarJugada(saldos, jugadora, costo) {
         if (!jugadora || !costo) return;
         if (!saldos[jugadora]) saldos[jugadora] = 0;
-        saldos[jugadora] += efectoEstado('pendiente', costo); // +costo
+        saldos[jugadora] += costo;
     }
 
     function alQuitarJugada(saldos, jugadora, estadoActual, costo) {
         if (!jugadora || !costo) return;
         if (!saldos[jugadora]) saldos[jugadora] = 0;
-        saldos[jugadora] -= efectoEstado(estadoActual, costo);
+        saldos[jugadora] += (estadoActual === 'pagado') ? costo : -costo;
     }
 
     function alAlternarPago(saldos, jugadora, estadoActual, costo) {
         if (!jugadora || !costo) return;
         if (!saldos[jugadora]) saldos[jugadora] = 0;
-        let nuevoEstado = (estadoActual === 'pendiente') ? 'pagado' : 'pendiente';
-        // Quita el efecto anterior y aplica el nuevo efecto exacto
-        saldos[jugadora] += efectoEstado(nuevoEstado, costo) - efectoEstado(estadoActual, costo);
+        saldos[jugadora] += (estadoActual === 'pendiente') ? -costo : costo;
     }
 
     function obtenerTandaActual() {
