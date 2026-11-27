@@ -622,8 +622,11 @@
         }
     }
 
-    function devolverJugadaPendiente(saldos, jugadora, estadoPago, costo) {
-        if (jugadora !== "" && costo > 0 && estadoPago !== 'pagado') {
+    // Al quitar una jugada (-- Disponible --):
+    // - Si estaba pendiente (ej: -1000), suma +1000 y queda en 0 (quita la deuda).
+    // - Si ya estaba pagada (ej: 0), suma +1000 y queda en +1000 (saldo a favor porque ya la pagó y no la jugó).
+    function devolverJugadaAlQuitar(saldos, jugadora, costo) {
+        if (jugadora !== "" && costo > 0) {
             const actual = typeof saldos[jugadora] === 'number' && !isNaN(saldos[jugadora]) ? saldos[jugadora] : 0;
             saldos[jugadora] = actual + costo;
         }
@@ -829,7 +832,6 @@
         select.addEventListener('change', function() {
             let valorLinea = leerCostoSeguro('valor_linea_config', 'valor_linea_costo');
             let anteriorJugadora = obtenerJugadoraLinea(lineaNum, tandaNum);
-            let estadoAnterior = obtenerEstadoPagoLinea(lineaNum, tandaNum);
             let nuevaJugadora = select.value;
 
             if (nuevaJugadora !== "" && valorLinea <= 0) {
@@ -839,7 +841,7 @@
             let saldos = obtenerSaldos();
             let updates = {};
 
-            devolverJugadaPendiente(saldos, anteriorJugadora, estadoAnterior, valorLinea);
+            devolverJugadaAlQuitar(saldos, anteriorJugadora, valorLinea);
 
             if (nuevaJugadora === "") {
                 setLineaUpdates(updates, lineaNum, tandaNum, null, null);
@@ -973,7 +975,6 @@
             select.addEventListener('change', function() {
                 let valorObjeto = leerCostoSeguro('valor_objeto_config', 'valor_objeto_costo');
                 let anteriorJugadora = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
-                let estadoAnterior = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
                 let nuevaJugadora = select.value;
 
                 if (nuevaJugadora !== "" && valorObjeto <= 0) {
@@ -983,7 +984,7 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                devolverJugadaPendiente(saldos, anteriorJugadora, estadoAnterior, valorObjeto);
+                devolverJugadaAlQuitar(saldos, anteriorJugadora, valorObjeto);
 
                 if (nuevaJugadora === "") {
                     updates['objeto_ronda_' + i] = null;
@@ -1076,7 +1077,6 @@
             select.addEventListener('change', function() {
                 let valorColor = leerCostoSeguro('valor_color_config', 'valor_color_costo');
                 let anteriorJugadora = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
-                let estadoAnterior = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
                 let nuevaJugadora = select.value;
 
                 if (nuevaJugadora !== "" && valorColor <= 0) {
@@ -1086,7 +1086,7 @@
                 let saldos = obtenerSaldos();
                 let updates = {};
 
-                devolverJugadaPendiente(saldos, anteriorJugadora, estadoAnterior, valorColor);
+                devolverJugadaAlQuitar(saldos, anteriorJugadora, valorColor);
 
                 if (nuevaJugadora === "") {
                     updates['color_ronda_' + i] = null;
@@ -1358,8 +1358,7 @@
             for (let i = 1; i <= totalLineas; i++) {
                 for (let t = 1; t <= maxTandasLineas; t++) {
                     let jug = obtenerJugadoraLinea(i, t);
-                    let est = obtenerEstadoPagoLinea(i, t);
-                    devolverJugadaPendiente(saldos, jug, est, valorLinea);
+                    devolverJugadaAlQuitar(saldos, jug, valorLinea);
                     setLineaUpdates(updates, i, t, null, null);
                 }
             }
@@ -1376,8 +1375,7 @@
 
             for (let i = 1; i <= totalObjetos; i++) {
                 let jug = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
-                let est = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
-                devolverJugadaPendiente(saldos, jug, est, valorObjeto);
+                devolverJugadaAlQuitar(saldos, jug, valorObjeto);
                 updates['objeto_ronda_' + i] = null;
                 updates['estado_pago_objeto_' + i] = null;
             }
@@ -1394,8 +1392,7 @@
 
             for (let i = 1; i <= totalColores; i++) {
                 let jug = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
-                let est = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
-                devolverJugadaPendiente(saldos, jug, est, valorColor);
+                devolverJugadaAlQuitar(saldos, jug, valorColor);
                 updates['color_ronda_' + i] = null;
                 updates['estado_pago_color_' + i] = null;
             }
