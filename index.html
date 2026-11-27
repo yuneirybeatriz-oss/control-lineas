@@ -580,27 +580,32 @@
             : {};
     }
 
-    // Reglas directas sobre el saldo:
-    // - Asignar jugada (pendiente): +costo
-    // - Marcar pagado ('pagado'): -(2 * costo) -> compensa el +costo inicial y descuenta el pago
-    // - Quitar pagado (vuelve a pendiente): +(2 * costo)
-    // - Quitar jugada: si estaba pendiente resta -costo; si estaba pagada suma +costo
+    // Regla corregida:
+    // - Sin pagar / pendiente: SUMA (+costo)
+    // - Pagado ('pagado'): RESTA (-costo)
+    function efectoEstado(estado, costo) {
+        if (!costo) return 0;
+        return (estado === 'pagado') ? -costo : costo;
+    }
+
     function alAsignarJugada(saldos, jugadora, costo) {
         if (!jugadora || !costo) return;
         if (!saldos[jugadora]) saldos[jugadora] = 0;
-        saldos[jugadora] += costo;
+        saldos[jugadora] += efectoEstado('pendiente', costo); // +costo
     }
 
     function alQuitarJugada(saldos, jugadora, estadoActual, costo) {
         if (!jugadora || !costo) return;
         if (!saldos[jugadora]) saldos[jugadora] = 0;
-        saldos[jugadora] += (estadoActual === 'pagado') ? costo : -costo;
+        saldos[jugadora] -= efectoEstado(estadoActual, costo);
     }
 
     function alAlternarPago(saldos, jugadora, estadoActual, costo) {
         if (!jugadora || !costo) return;
         if (!saldos[jugadora]) saldos[jugadora] = 0;
-        saldos[jugadora] += (estadoActual === 'pendiente') ? -(2 * costo) : (2 * costo);
+        let nuevoEstado = (estadoActual === 'pendiente') ? 'pagado' : 'pendiente';
+        // Quita el efecto anterior y aplica el nuevo efecto exacto
+        saldos[jugadora] += efectoEstado(nuevoEstado, costo) - efectoEstado(estadoActual, costo);
     }
 
     function obtenerTandaActual() {
