@@ -574,39 +574,65 @@
         dbRef.update(updates);
     }
 
+    function obtenerSaldosBase(dataObj) {
+        let d = dataObj || window._dbRemota || {};
+        if (d.saldos_base) {
+            return JSON.parse(d.saldos_base);
+        }
+        // Si es la primera vez tras actualizar, toma saldos_jugadoras como base inicial
+        return d.saldos_jugadoras ? JSON.parse(d.saldos_jugadoras) : {};
+    }
+
+    // Calcula el saldo final de cada jugadora partiendo de `saldosBase`:
+    // - Jugada pendiente (no pagada): +costo
+    // - Jugada pagada ('pagado'): -costo
+    function calcularSaldosActuales(dataObj) {
+        let d = dataObj || window._dbRemota || {};
+        let base = obtenerSaldosBase(d);
+        let resultado = Object.assign({}, base);
+
+        let costoLinea = parseFloat(d.valor_linea_costo) || 0;
+        let costoObjeto = parseFloat(d.valor_objeto_costo) || 0;
+        let costoColor = parseFloat(d.valor_color_costo) || 0;
+
+        for (let i = 1; i <= totalLineas; i++) {
+            for (let t = 1; t <= maxTandasLineas; t++) {
+                let jug = (t === 1)
+                    ? (d['linea_ronda_' + i + '_t1'] || d['linea_ronda_' + i] || '')
+                    : (d['linea_ronda_' + i + '_t' + t] || '');
+                if (jug && costoLinea > 0) {
+                    let est = (t === 1)
+                        ? (d['estado_pago_linea_' + i + '_t1'] || d['estado_pago_linea_' + i] || 'pendiente')
+                        : (d['estado_pago_linea_' + i + '_t' + t] || 'pendiente');
+                    if (!resultado[jug]) resultado[jug] = 0;
+                    resultado[jug] += (est === 'pagado') ? -costoLinea : costoLinea;
+                }
+            }
+        }
+
+        for (let i = 1; i <= totalObjetos; i++) {
+            let jug = d['objeto_ronda_' + i] || '';
+            if (jug && costoObjeto > 0) {
+                let est = d['estado_pago_objeto_' + i] || 'pendiente';
+                if (!resultado[jug]) resultado[jug] = 0;
+                resultado[jug] += (est === 'pagado') ? -costoObjeto : costoObjeto;
+            }
+        }
+
+        for (let i = 1; i <= totalColores; i++) {
+            let jug = d['color_ronda_' + i] || '';
+            if (jug && costoColor > 0) {
+                let est = d['estado_pago_color_' + i] || 'pendiente';
+                if (!resultado[jug]) resultado[jug] = 0;
+                resultado[jug] += (est === 'pagado') ? -costoColor : costoColor;
+            }
+        }
+
+        return resultado;
+    }
+
     function obtenerSaldos() {
-        return (window._dbRemota && window._dbRemota.saldos_jugadoras)
-            ? JSON.parse(window._dbRemota.saldos_jugadoras)
-            : {};
-    }
-
-    function obtenerImpactoGuardado(claveBase) {
-        if (!window._dbRemota) return null;
-        return window._dbRemota['impacto_' + claveBase] || null;
-    }
-
-    // Registra en `updates` el ajuste exacto de saldo para una jugada:
-    // - Si está pendiente (no pagado): suma (+costoUnitario)
-    // - Si está pagado ('pagado'): descuenta (-costoUnitario)
-    // - Si se quita: revierte el impacto anterior una sola vez
-    function prepararCambioJugada(updates, saldos, claveBase, jugadora, estadoPago, costoUnitario) {
-        let impactoAnterior = obtenerImpactoGuardado(claveBase);
-        if (impactoAnterior && impactoAnterior.jugadora) {
-            let prevJ = impactoAnterior.jugadora;
-            let prevDelta = parseFloat(impactoAnterior.delta) || 0;
-            if (!saldos[prevJ]) saldos[prevJ] = 0;
-            saldos[prevJ] -= prevDelta;
-        }
-
-        let nuevoDelta = 0;
-        if (jugadora && jugadora !== "" && costoUnitario > 0) {
-            nuevoDelta = (estadoPago === 'pagado') ? -costoUnitario : costoUnitario;
-            if (!saldos[jugadora]) saldos[jugadora] = 0;
-            saldos[jugadora] += nuevoDelta;
-            updates['impacto_' + claveBase] = { jugadora: jugadora, delta: nuevoDelta };
-        } else {
-            updates['impacto_' + claveBase] = null;
-        }
+        return calcularSaldosActuales(window._dbRemota);
     }
 
     function obtenerTandaActual() {
@@ -752,7 +778,6 @@
     function crearSelectorTandaLinea(lineaNum, tandaNum, listaFijas) {
         let guardado = obtenerJugadoraLinea(lineaNum, tandaNum);
         let estadoPago = obtenerEstadoPagoLinea(lineaNum, tandaNum);
-        let claveBase = `linea_${lineaNum}_t${tandaNum}`;
 
         let select = document.createElement('select');
         select.className = 'line-select';
@@ -772,20 +797,13 @@
         });
 
         select.addEventListener('change', function() {
-            let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
             let nuevaJugadora = select.value;
-            let saldos = obtenerSaldos();
             let updates = {};
-
             if (nuevaJugadora === "") {
-                prepararCambioJugada(updates, saldos, claveBase, "", 'pendiente', valorLinea);
                 setLineaUpdates(updates, lineaNum, tandaNum, null, null);
             } else {
                 setLineaUpdates(updates, lineaNum, tandaNum, nuevaJugadora, 'pendiente');
-                prepararCambioJugada(updates, saldos, claveBase, nuevaJugadora, 'pendiente', valorLinea);
             }
-
-            updates['saldos_jugadoras'] = JSON.stringify(saldos);
             guardarLoteFirebase(updates);
         });
 
@@ -799,13 +817,8 @@
 
             let estadoActual = obtenerEstadoPagoLinea(lineaNum, tandaNum);
             let nuevoEstado = (estadoActual === 'pendiente') ? 'pagado' : 'pendiente';
-            let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
-            let saldos = obtenerSaldos();
             let updates = {};
-
             setLineaUpdates(updates, lineaNum, tandaNum, nombreJugadora, nuevoEstado);
-            prepararCambioJugada(updates, saldos, claveBase, nombreJugadora, nuevoEstado, valorLinea);
-            updates['saldos_jugadoras'] = JSON.stringify(saldos);
             guardarLoteFirebase(updates);
         });
 
@@ -869,7 +882,6 @@
             let guardado = (window._dbRemota && window._dbRemota['objeto_ronda_' + i]) || '';
             let estadoPago = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
             let nombreObjeto = listaObjetosNombres[i - 1];
-            let claveBase = `objeto_${i}`;
 
             let row = document.createElement('div');
             row.className = 'line-row';
@@ -898,22 +910,15 @@
             });
 
             select.addEventListener('change', function() {
-                let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
                 let nuevaJugadora = select.value;
-                let saldos = obtenerSaldos();
                 let updates = {};
-
                 if (nuevaJugadora === "") {
-                    prepararCambioJugada(updates, saldos, claveBase, "", 'pendiente', valorObjeto);
                     updates['objeto_ronda_' + i] = null;
                     updates['estado_pago_objeto_' + i] = null;
                 } else {
                     updates['objeto_ronda_' + i] = nuevaJugadora;
                     updates['estado_pago_objeto_' + i] = 'pendiente';
-                    prepararCambioJugada(updates, saldos, claveBase, nuevaJugadora, 'pendiente', valorObjeto);
                 }
-
-                updates['saldos_jugadoras'] = JSON.stringify(saldos);
                 guardarLoteFirebase(updates);
             });
 
@@ -927,14 +932,7 @@
 
                 let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_objeto_' + i]) || 'pendiente';
                 let nuevoEstado = (estadoActual === 'pendiente') ? 'pagado' : 'pendiente';
-                let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
-                let saldos = obtenerSaldos();
-                let updates = {};
-
-                updates['estado_pago_objeto_' + i] = nuevoEstado;
-                prepararCambioJugada(updates, saldos, claveBase, nombreJugadora, nuevoEstado, valorObjeto);
-                updates['saldos_jugadoras'] = JSON.stringify(saldos);
-                guardarLoteFirebase(updates);
+                guardarEnFirebase('estado_pago_objeto_' + i, nuevoEstado);
             });
 
             row.appendChild(num);
@@ -954,7 +952,6 @@
             let guardado = (window._dbRemota && window._dbRemota['color_ronda_' + i]) || '';
             let estadoPago = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
             let nombreColor = listaColoresNombres[i - 1];
-            let claveBase = `color_${i}`;
 
             let row = document.createElement('div');
             row.className = 'line-row';
@@ -983,22 +980,15 @@
             });
 
             select.addEventListener('change', function() {
-                let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
                 let nuevaJugadora = select.value;
-                let saldos = obtenerSaldos();
                 let updates = {};
-
                 if (nuevaJugadora === "") {
-                    prepararCambioJugada(updates, saldos, claveBase, "", 'pendiente', valorColor);
                     updates['color_ronda_' + i] = null;
                     updates['estado_pago_color_' + i] = null;
                 } else {
                     updates['color_ronda_' + i] = nuevaJugadora;
                     updates['estado_pago_color_' + i] = 'pendiente';
-                    prepararCambioJugada(updates, saldos, claveBase, nuevaJugadora, 'pendiente', valorColor);
                 }
-
-                updates['saldos_jugadoras'] = JSON.stringify(saldos);
                 guardarLoteFirebase(updates);
             });
 
@@ -1012,14 +1002,7 @@
 
                 let estadoActual = (window._dbRemota && window._dbRemota['estado_pago_color_' + i]) || 'pendiente';
                 let nuevoEstado = (estadoActual === 'pendiente') ? 'pagado' : 'pendiente';
-                let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
-                let saldos = obtenerSaldos();
-                let updates = {};
-
-                updates['estado_pago_color_' + i] = nuevoEstado;
-                prepararCambioJugada(updates, saldos, claveBase, nombreJugadora, nuevoEstado, valorColor);
-                updates['saldos_jugadoras'] = JSON.stringify(saldos);
-                guardarLoteFirebase(updates);
+                guardarEnFirebase('estado_pago_color_' + i, nuevoEstado);
             });
 
             row.appendChild(num);
@@ -1243,56 +1226,42 @@
 
     function limpiarLineasRonda() {
         if (confirm("¿Vaciar las líneas de esta ronda (incluyendo Doble/Triple)?")) {
-            let valorLinea = parseFloat(document.getElementById('valor_linea_config').value) || 0;
-            let saldos = obtenerSaldos();
             let updates = {};
-
             for (let i = 1; i <= totalLineas; i++) {
                 for (let t = 1; t <= maxTandasLineas; t++) {
-                    prepararCambioJugada(updates, saldos, `linea_${i}_t${t}`, "", 'pendiente', valorLinea);
                     setLineaUpdates(updates, i, t, null, null);
                 }
             }
-            updates['saldos_jugadoras'] = JSON.stringify(saldos);
             guardarLoteFirebase(updates);
         }
     }
 
     function limpiarObjetosRonda() {
         if (confirm("¿Vaciar los 20 objetos de esta ronda?")) {
-            let valorObjeto = parseFloat(document.getElementById('valor_objeto_config').value) || 0;
-            let saldos = obtenerSaldos();
             let updates = {};
-
             for (let i = 1; i <= totalObjetos; i++) {
-                prepararCambioJugada(updates, saldos, `objeto_${i}`, "", 'pendiente', valorObjeto);
                 updates['objeto_ronda_' + i] = null;
                 updates['estado_pago_objeto_' + i] = null;
             }
-            updates['saldos_jugadoras'] = JSON.stringify(saldos);
             guardarLoteFirebase(updates);
         }
     }
 
     function limpiarColoresRonda() {
         if (confirm("¿Vaciar los 10 colores de esta ronda?")) {
-            let valorColor = parseFloat(document.getElementById('valor_color_config').value) || 0;
-            let saldos = obtenerSaldos();
             let updates = {};
-
             for (let i = 1; i <= totalColores; i++) {
-                prepararCambioJugada(updates, saldos, `color_${i}`, "", 'pendiente', valorColor);
                 updates['color_ronda_' + i] = null;
                 updates['estado_pago_color_' + i] = null;
             }
-            updates['saldos_jugadoras'] = JSON.stringify(saldos);
             guardarLoteFirebase(updates);
         }
     }
 
     // ================= GUARDAR RONDA Y SUMAR PREMIOS =================
     function guardarRonda() {
-        let saldos = obtenerSaldos();
+        let base = obtenerSaldosBase();
+        let saldosFinales = calcularSaldosActuales();
         let historial = (window._dbRemota && window._dbRemota.historial_rondas_lista) ? JSON.parse(window._dbRemota.historial_rondas_lista) : [];
         let rondaActual = obtenerRondaActual();
         let registradas = 0;
@@ -1309,8 +1278,8 @@
                     let jugadas = obtenerJugadasDeLineaEnRonda(idx);
                     if (jugadas.length > 0) {
                         jugadas.forEach(nombre => {
-                            if (!saldos[nombre]) saldos[nombre] = 0;
-                            saldos[nombre] += monto;
+                            if (!saldosFinales[nombre]) saldosFinales[nombre] = 0;
+                            saldosFinales[nombre] += monto;
                             registradas++;
                             resumenRondaText += `[Línea ${idx}: ${nombre} (+${monto})] `;
                         });
@@ -1321,7 +1290,8 @@
 
         if (registradas > 0) {
             historial.push(resumenRondaText);
-            updates['saldos_jugadoras'] = JSON.stringify(saldos);
+            updates['saldos_base'] = JSON.stringify(saldosFinales);
+            updates['saldos_jugadoras'] = JSON.stringify(saldosFinales);
             updates['historial_rondas_lista'] = JSON.stringify(historial);
             
             for (let p = 1; p <= 4; p++) {
@@ -1333,7 +1303,6 @@
             for (let i = 1; i <= totalLineas; i++) {
                 for (let t = 1; t <= maxTandasLineas; t++) {
                     setLineaUpdates(updates, i, t, null, null);
-                    updates['impacto_' + `linea_${i}_t${t}`] = null;
                 }
             }
             updates['tanda_lineas'] = 1;
@@ -1348,7 +1317,7 @@
     }
 
     function guardarRondaObjetos() {
-        let saldos = obtenerSaldos();
+        let saldosFinales = calcularSaldosActuales();
         let historial = (window._dbRemota && window._dbRemota.historial_rondas_lista) ? JSON.parse(window._dbRemota.historial_rondas_lista) : [];
         let rondaActual = obtenerRondaActual();
         let registradas = 0;
@@ -1364,8 +1333,8 @@
                 if (idx >= 1 && idx <= totalObjetos) {
                     let nombre = (window._dbRemota && window._dbRemota['objeto_ronda_' + idx]) || '';
                     if (nombre !== "") {
-                        if (!saldos[nombre]) saldos[nombre] = 0;
-                        saldos[nombre] += monto; 
+                        if (!saldosFinales[nombre]) saldosFinales[nombre] = 0;
+                        saldosFinales[nombre] += monto; 
                         registradas++;
                         resumenRondaText += `[Obj ${idx}: ${nombre} (+${monto})] `;
                     }
@@ -1375,7 +1344,8 @@
 
         if (registradas > 0) {
             historial.push(resumenRondaText);
-            updates['saldos_jugadoras'] = JSON.stringify(saldos);
+            updates['saldos_base'] = JSON.stringify(saldosFinales);
+            updates['saldos_jugadoras'] = JSON.stringify(saldosFinales);
             updates['historial_rondas_lista'] = JSON.stringify(historial);
             
             for (let p = 1; p <= 3; p++) {
@@ -1387,7 +1357,6 @@
             for (let i = 1; i <= totalObjetos; i++) {
                 updates['objeto_ronda_' + i] = null;
                 updates['estado_pago_objeto_' + i] = null;
-                updates['impacto_' + `objeto_${i}`] = null;
             }
 
             let nuevaRonda = rondaActual + 1;
@@ -1400,7 +1369,7 @@
     }
 
     function guardarRondaColores() {
-        let saldos = obtenerSaldos();
+        let saldosFinales = calcularSaldosActuales();
         let historial = (window._dbRemota && window._dbRemota.historial_rondas_lista) ? JSON.parse(window._dbRemota.historial_rondas_lista) : [];
         let rondaActual = obtenerRondaActual();
         let registradas = 0;
@@ -1416,8 +1385,8 @@
                 if (idx >= 1 && idx <= totalColores) {
                     let nombre = (window._dbRemota && window._dbRemota['color_ronda_' + idx]) || '';
                     if (nombre !== "") {
-                        if (!saldos[nombre]) saldos[nombre] = 0;
-                        saldos[nombre] += monto; 
+                        if (!saldosFinales[nombre]) saldosFinales[nombre] = 0;
+                        saldosFinales[nombre] += monto; 
                         registradas++;
                         resumenRondaText += `[Color ${idx}: ${nombre} (+${monto})] `;
                     }
@@ -1427,7 +1396,8 @@
 
         if (registradas > 0) {
             historial.push(resumenRondaText);
-            updates['saldos_jugadoras'] = JSON.stringify(saldos);
+            updates['saldos_base'] = JSON.stringify(saldosFinales);
+            updates['saldos_jugadoras'] = JSON.stringify(saldosFinales);
             updates['historial_rondas_lista'] = JSON.stringify(historial);
             
             for (let p = 1; p <= 3; p++) {
@@ -1439,7 +1409,6 @@
             for (let i = 1; i <= totalColores; i++) {
                 updates['color_ronda_' + i] = null;
                 updates['estado_pago_color_' + i] = null;
-                updates['impacto_' + `color_${i}`] = null;
             }
 
             let nuevaRonda = rondaActual + 1;
@@ -1456,10 +1425,10 @@
         if (montoStr !== null && montoStr.trim() !== "") {
             let cambio = parseFloat(montoStr);
             if (!isNaN(cambio)) {
-                let saldos = obtenerSaldos();
-                if (!saldos[nombre]) saldos[nombre] = 0;
-                saldos[nombre] += cambio;
-                guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
+                let base = obtenerSaldosBase();
+                if (!base[nombre]) base[nombre] = 0;
+                base[nombre] += cambio;
+                guardarEnFirebase('saldos_base', JSON.stringify(base));
             } else {
                 alert("Por favor introduce un número válido.");
             }
@@ -1468,9 +1437,9 @@
 
     function liquidarJugadora(nombre) {
         if (confirm(`¿Ya le pagaste o te pagó ${nombre}? Esto dejará su saldo en cero y la retirará de la lista.`)) {
-            let saldos = obtenerSaldos();
-            delete saldos[nombre];
-            guardarEnFirebase('saldos_jugadoras', JSON.stringify(saldos));
+            let base = obtenerSaldosBase();
+            delete base[nombre];
+            guardarEnFirebase('saldos_base', JSON.stringify(base));
         }
     }
 
