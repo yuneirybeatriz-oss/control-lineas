@@ -1044,15 +1044,15 @@
     }
 
     // ================= BUSCAR NOMBRE POR NÚMERO DE LÍNEA / OBJETO / COLOR =================
-    function obtenerJugadorasDeLineaEnRonda(idx) {
-        let nombres = [];
+    function obtenerJugadasDeLineaEnRonda(idx) {
+        let jugadas = [];
         for (let t = 1; t <= maxTandasLineas; t++) {
             let j = obtenerJugadoraLinea(idx, t);
-            if (j !== "" && !nombres.includes(j)) {
-                nombres.push(j);
+            if (j !== "") {
+                jugadas.push(j);
             }
         }
-        return nombres;
+        return jugadas;
     }
 
     function actualizarNombrePremio(p) {
@@ -1061,8 +1061,8 @@
         if (numInput === "") { lbl.textContent = "--"; return; }
         let idx = parseInt(numInput);
         if (idx >= 1 && idx <= totalLineas) {
-            let jugadoras = obtenerJugadorasDeLineaEnRonda(idx);
-            lbl.textContent = jugadoras.length > 0 ? "👤 " + jugadoras.join(" / ") : "⚠️ Vacía / Nadie";
+            let jugadas = obtenerJugadasDeLineaEnRonda(idx);
+            lbl.textContent = jugadas.length > 0 ? "👤 " + jugadas.join(" / ") : "⚠️ Vacía / Nadie";
         } else {
             lbl.textContent = "❌ N° inválido";
         }
@@ -1324,9 +1324,9 @@
             if (numInput !== "" && monto > 0) {
                 let idx = parseInt(numInput);
                 if (idx >= 1 && idx <= totalLineas) {
-                    let jugadoras = obtenerJugadorasDeLineaEnRonda(idx);
-                    if (jugadoras.length > 0) {
-                        jugadoras.forEach(nombre => {
+                    let jugadas = obtenerJugadasDeLineaEnRonda(idx);
+                    if (jugadas.length > 0) {
+                        jugadas.forEach(nombre => {
                             if (!saldos[nombre]) saldos[nombre] = 0;
                             saldos[nombre] += monto;
                             registradas++;
